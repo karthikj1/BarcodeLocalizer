@@ -69,22 +69,45 @@ abstract class Barcode {
     
     Mat NormalizeCandidateRegion(RotatedRect rect) {
         // rect is the RotatedRect which contains a candidate region for the barcode
-        // returns Mat contaning cropped area(region of interest) with just the barcode
+        // returns Mat containing cropped area(region of interest) with just the barcode 
+        // The barcode region is from the *original* image, not the scaled image
         // the cropped area is also rotated as necessary to be horizontal or vertical rather than skewed
-
         // matrices we'll use
-        Mat M, rotated, cropped;
+        // parts of this are from http://felix.abecassis.me/2011/10/opencv-rotation-deskewing/
+        // and http://stackoverflow.com/questions/22041699/rotate-an-image-without-cropping-in-opencv-in-c
+        
+        Mat rotation_matrix, rotated, cropped;
         // get angle and size from the bounding box
         double orientation = rect.angle + 90;
         double rotation_angle;
 
-        ImageDisplay.showImageFrame(img_details.src_original, "Test of src size");
+        
+        int orig_rows = img_details.src_original.rows();
+        int orig_cols = img_details.src_original.cols();
+        
+        int diagonal = (int) Math.sqrt(orig_rows*orig_rows + orig_cols*orig_cols);
+
+        int newWidth = diagonal;
+        int newHeight = diagonal;
+
+        int offsetX = (newWidth - orig_cols) / 2;
+        int offsetY = (newHeight - orig_rows) / 2;
+        rotated = new Mat(newWidth, newHeight, img_details.src_original.type());
+        
+        img_details.src_original.copyTo(rotated.rowRange(offsetY, offsetY + orig_rows).colRange(offsetX, offsetX + orig_cols));
+        // scale candidate region back up to original size and return cropped part from *original* image 
+        // need the 1.0 there to force floating-point arithmetic from int values
+        double scale_factor = orig_rows/(1.0 * img_details.src_scaled.rows());        
+        
+        rect.center.x = rect.center.x*scale_factor + offsetX;
+        rect.center.y = rect.center.y*scale_factor + offsetY;
+        rect.size.height *= scale_factor;
+        rect.size.width *= scale_factor;
+
         Size rect_size = new Size(rect.size.width, rect.size.height);
-        int newSize = (int) Math.sqrt(rect_size.height * rect_size.height + rect_size.width * rect_size.width);
-        rotated = new Mat(newSize, newSize, img_details.src_scaled.type());
         cropped = new Mat();
 
-        // find orientation for barcode so that we can extend it along its long axis looking for quiet zone
+        // find orientation for barcode
         if (rect_size.width < rect_size.height) {
             orientation += 90;
             double temp = rect_size.width;
@@ -92,19 +115,20 @@ abstract class Barcode {
             rect_size.height = temp;
         }
 
-        rotation_angle = orientation - 90;
-
-        // below 3 lines and the width-height swapping above from http://felix.abecassis.me/2011/10/opencv-rotation-deskewing/
+        rotation_angle = orientation - 90;  // rotate 90 degress from its orientation to straighten it out       
+        
         // get the rotation matrix
-        M = Imgproc.getRotationMatrix2D(rect.center, rotation_angle, 1.0);
+        Point src_center = new Point(rotated.cols() / 2.0, rotated.rows() / 2.0);
+        rotation_matrix = Imgproc.getRotationMatrix2D(src_center, rotation_angle, 1.0);
         // perform the affine transformation
-        Imgproc.warpAffine(img_details.src_scaled, rotated, M, img_details.src_scaled.size(), Imgproc.INTER_CUBIC);
+        Imgproc.warpAffine(rotated, rotated, rotation_matrix, rotated.size(), Imgproc.INTER_CUBIC);
         // crop the resulting image
         Imgproc.getRectSubPix(rotated, rect_size, rect.center, cropped);
-
+        ImageDisplay.showImageFrame(cropped, "Cropped and deskewed image");
         return cropped;
     }
 
+    
     protected double calc_rect_sum(Mat integral, int right_col, int left_col, int top_row, int bottom_row) {
         double top_left, top_right, bottom_left, bottom_right;
         double sum;

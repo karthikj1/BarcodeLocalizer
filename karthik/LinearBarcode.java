@@ -86,8 +86,11 @@ public class LinearBarcode extends Barcode{
             {
                 CandidateBarcode cb = new CandidateBarcode(img_details, minRect);
                 // get candidate regions to be a barcode
-               //  cb.drawCandidateRegion(minRect, new Scalar(0, 255, 0));
+                if(DEBUG_IMAGES)
+                     cb.drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
                 minRect = cb.getCandidateRegion();
+               if(DEBUG_IMAGES)
+                    cb.drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_scaled);
                 ROI = NormalizeCandidateRegion(minRect);
                 ROI = postprocess_image(ROI);
                try{
@@ -97,9 +100,6 @@ public class LinearBarcode extends Barcode{
                     System.out.println("Error when creating image " + ioe.getMessage());
                     return null;
                 }
-                cb.drawCandidateRegion(minRect, new Scalar(0, 0, 255));
-                if(DEBUG_IMAGES)
-                    ImageDisplay.showImageFrame(ROI, "Cropped image of " + name);
              }
         }
         if(DEBUG_IMAGES)

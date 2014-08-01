@@ -32,7 +32,8 @@ class ImageInfo {
     Barcode.CodeType searchType;
 
     ImageInfo(Mat src) {
-        this.src_original = src;
+       src_original = src;
+       src_scaled = src_original.clone();
     }       
     
 }

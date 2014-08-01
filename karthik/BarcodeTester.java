@@ -60,7 +60,7 @@ public class BarcodeTester {
         }
         
 
-        images.add(imgDir + fileSeparator + "QRCode3.jpg");
+        images.add(imgDir + fileSeparator + "barcode15.jpg");
         if(images.size() > 1)
             show_intermediate_steps = false;
         

@@ -137,7 +137,7 @@ public class MatrixBarcode extends Barcode {
             {
                 CandidateBarcode cb = new CandidateBarcode(img_details, minRect);
                 if(DEBUG_IMAGES)
-                    cb.drawCandidateRegion(minRect, new Scalar(0, 255, 0));
+                    cb.drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
                 // get candidate regions to be a barcode
                 minRect = cb.getCandidateRegion();
                 ROI = NormalizeCandidateRegion(minRect);                
@@ -149,8 +149,7 @@ public class MatrixBarcode extends Barcode {
                     return null;
                 }
                 if (DEBUG_IMAGES) {
-                    cb.drawCandidateRegion(minRect, new Scalar(0, 0, 255));
-                    ImageDisplay.showImageFrame(ROI, "Cropped image of " + name);
+                    cb.drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_original);
                 }
             }
         }

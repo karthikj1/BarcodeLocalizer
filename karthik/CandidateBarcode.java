@@ -35,13 +35,13 @@ class CandidateBarcode {
         this.minRect = minRect;
     }
 
-    void drawCandidateRegion(RotatedRect region, Scalar colour) {
+    void drawCandidateRegion(RotatedRect region, Scalar colour, Mat img) {
         Point rectPoints[] = new Point[4];
         region.points(rectPoints);
         // draw the rectangle
         for (int j = 0; j < 3; j++)
-            Core.line(img_details.src_scaled, rectPoints[j], rectPoints[j + 1], colour, 2, Core.LINE_AA, 0);
-        Core.line(img_details.src_scaled, rectPoints[3], rectPoints[0], colour, 2, Core.LINE_AA, 0);
+            Core.line(img, rectPoints[j], rectPoints[j + 1], colour, 2, Core.LINE_AA, 0);
+        Core.line(img, rectPoints[3], rectPoints[0], colour, 2, Core.LINE_AA, 0);
     }
 
     RotatedRect getCandidateRegion() {
