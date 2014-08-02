@@ -36,7 +36,7 @@ public class MatrixBarcode extends Barcode {
 
     public MatrixBarcode(String filename) {
         super(filename);
-        searchType = CodeType.MATRIX;
+        img_details.searchType = CodeType.MATRIX;
 
     }
 
@@ -48,7 +48,7 @@ public class MatrixBarcode extends Barcode {
 
     protected List<BufferedImage> locateBarcode(){
 
-        System.out.println("Searching " + name + " for " + searchType.name());
+        System.out.println("Searching " + name + " for " + img_details.searchType.name());
         preprocess_image();
 
         findCandidates();   // find areas with low variance in gradient direction
@@ -130,23 +130,24 @@ public class MatrixBarcode extends Barcode {
 
         // convert type after modifying angle so that angles above 360 don't get truncated
         img_details.gradient_direction.convertTo(img_details.gradient_direction, CvType.CV_8U);
-        write_Mat("angles.csv", img_details.gradient_direction);
+        if(DEBUG_IMAGES)
+            write_Mat("angles.csv", img_details.gradient_direction);
 
         // calculate magnitude of gradient, normalize and threshold
         img_details.gradient_magnitude = Mat.zeros(scharr_x.size(), scharr_x.type());
         Core.magnitude(scharr_x, scharr_y, img_details.gradient_magnitude);
-   //     write_Mat("magnitudes_raw.csv", img_details.gradient_magnitude);
         Core.normalize(img_details.gradient_magnitude, img_details.gradient_magnitude, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
-   //     write_Mat("magnitudes_normalized.csv", img_details.gradient_magnitude);
         Imgproc.threshold(img_details.gradient_magnitude, img_details.gradient_magnitude, 50, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-        write_Mat("magnitudes.csv", img_details.gradient_magnitude);
+        if(DEBUG_IMAGES)
+            write_Mat("magnitudes.csv", img_details.gradient_magnitude);
 
+        // calculate probabilities for each pixel from window around it, normalize and threshold
         probabilities = calcHistogramProbabilities();
-  //      write_Mat("probabilities_raw.csv", probabilities);
         Core.normalize(probabilities, probabilities, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);        
         System.out.println("Prob threshold is " + Imgproc.threshold(probabilities, probabilities, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU));
-        write_Mat("probabilities.csv", probabilities);
+        
         if (DEBUG_IMAGES){
+            write_Mat("probabilities.csv", probabilities);
             ImageDisplay.showImageFrame(img_details.gradient_magnitude, "Magnitudes");
             ImageDisplay.showImageFrame(probabilities, "histogram probabilities");            
         }

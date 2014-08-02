@@ -36,7 +36,7 @@ public class LinearBarcode extends Barcode{
 
     public LinearBarcode(String filename) {
         super(filename);
-        searchType = CodeType.LINEAR;
+        img_details.searchType = CodeType.LINEAR;
     }
     
     public LinearBarcode(String filename, boolean debug) {
@@ -46,7 +46,7 @@ public class LinearBarcode extends Barcode{
     
     protected List<BufferedImage> locateBarcode() {
 
-        System.out.println("Searching " + name + " for " + searchType.name());
+        System.out.println("Searching " + name + " for " + img_details.searchType.name());
         preprocess_image();
 
         findCandidates();   // find areas with low variance in gradient direction
@@ -164,17 +164,17 @@ public class LinearBarcode extends Barcode{
             }
 
         // convert type after modifying angle so that angles above 360 don't get truncated
-        img_details.gradient_direction.convertTo(img_details.gradient_direction, CvType.CV_8U); 
-        write_Mat("angles.csv", img_details.gradient_direction);
+        img_details.gradient_direction.convertTo(img_details.gradient_direction, CvType.CV_8U);
+        if(DEBUG_IMAGES)
+            write_Mat("angles.csv", img_details.gradient_direction);
         
-        // calculate magnitude of gradient
+        // calculate magnitude of gradient, normalize and threshold
         img_details.gradient_magnitude = Mat.zeros(scharr_x.size(), scharr_x.type());
         Core.magnitude(scharr_x, scharr_y, img_details.gradient_magnitude);
- //       write_Mat("magnitudes_raw.csv", img_details.gradient_magnitude);
         Core.normalize(img_details.gradient_magnitude, img_details.gradient_magnitude, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
- //       write_Mat("magnitudes_normalized.csv", img_details.gradient_magnitude);
         Imgproc.threshold(img_details.gradient_magnitude, img_details.gradient_magnitude, 50, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-        write_Mat("magnitudes.csv", img_details.gradient_magnitude);
+        if(DEBUG_IMAGES)
+            write_Mat("magnitudes.csv", img_details.gradient_magnitude);
        
         // calculate variances, normalize and threshold so that low-variance areas are bright(255) and 
         // high-variance areas are dark(0)
@@ -185,9 +185,9 @@ public class LinearBarcode extends Barcode{
         if(DEBUG_IMAGES){
            ImageDisplay.showImageFrame(img_details.gradient_magnitude, "Magnitudes");
            ImageDisplay.showImageFrame(variance, "Variance");
+           write_Mat("variance.csv", variance);       
         }
         
-        write_Mat("variance.csv", variance);       
         img_details.E3 = variance;
     }
 
@@ -209,7 +209,8 @@ public class LinearBarcode extends Barcode{
         
         // set angle to 0 at all points where gradient magnitude is 0 i.e. where there are no edges
         Core.bitwise_and(img_details.gradient_direction, img_details.gradient_magnitude, img_details.gradient_direction);
-        write_Mat("angles_modified.csv", img_details.gradient_direction);        
+        if(DEBUG_IMAGES)
+            write_Mat("angles_modified.csv", img_details.gradient_direction);        
         
         Imgproc.integral2(img_details.gradient_direction, integral_gradient_directions, integral_sumsq, CvType.CV_32F);
 

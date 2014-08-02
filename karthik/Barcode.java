@@ -59,9 +59,7 @@ abstract class Barcode {
  
     List<BufferedImage> candidateBarcodes = new ArrayList<>();
 
-    public static enum CodeType {LINEAR, MATRIX};
-    protected CodeType searchType;
-    
+    static enum CodeType {LINEAR, MATRIX};        
     
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -212,15 +210,14 @@ abstract class Barcode {
 
         rotation_angle = orientation - 90;  // rotate 90 degress from its orientation to straighten it out       
         System.out.println("Rotation angle is " + rotation_angle);
-        // get the rotation matrix
-//        Point src_center = new Point(rotated.cols() / 2.0, rotated.rows() / 2.0);
+        // get the rotation matrix - rotate around rectangle's centre, not image's centre
         rotation_matrix = Imgproc.getRotationMatrix2D(rect.center, rotation_angle, 1.0);
         // perform the affine transformation
         Imgproc.warpAffine(rotated, rotated, rotation_matrix, rotated.size(), Imgproc.INTER_CUBIC);
-        ImageDisplay.showImageFrame(rotated, "rotated and uncropped image");
+   //     ImageDisplay.showImageFrame(rotated, "rotated and uncropped " + name);
         // crop the resulting image
         Imgproc.getRectSubPix(rotated, rect_size, rect.center, cropped);
-        ImageDisplay.showImageFrame(cropped, "Cropped and deskewed image");
+    //    ImageDisplay.showImageFrame(cropped, "Cropped and deskewed " + name);
         return cropped;
     }
 
@@ -238,8 +235,8 @@ abstract class Barcode {
         Imgproc.morphologyEx(img_details.src_grayscale, img_details.src_grayscale, Imgproc.MORPH_BLACKHAT,
             Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.elem_size));
  
-        write_Mat("greyscale.csv", img_details.src_grayscale);
         if (DEBUG_IMAGES) {
+            write_Mat("greyscale.csv", img_details.src_grayscale);
             ImageDisplay.showImageFrame(img_details.src_grayscale, "Pre-processed image");
         }
     }
