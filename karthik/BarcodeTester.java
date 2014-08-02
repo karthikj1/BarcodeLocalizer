@@ -60,7 +60,7 @@ public class BarcodeTester {
         }
         
 
-        images.add(imgDir + fileSeparator + "barcode15.jpg");
+        images.add(imgDir + fileSeparator + "barcode_Code39.png");
         if(images.size() > 1)
             show_intermediate_steps = false;
         
@@ -68,7 +68,8 @@ public class BarcodeTester {
             if (imgFile.contains("barcode") || imgFile.contains("Barcode"))            
                 b = new LinearBarcode(imgFile, show_intermediate_steps);   
             else
-                b = new MatrixBarcode(imgFile, show_intermediate_steps);   
+                b = new MatrixBarcode(imgFile, show_intermediate_steps); 
+            b.setMultipleFlags(Barcode.TryHarderFlags.TRY_SMALL);
             candidateCodes = b.findBarcode();
             for(BufferedImage img: candidateCodes){
                   ImageDisplay.showImageFrame(img, "Tester:" + imgFile + " with cropped candidate barcode");

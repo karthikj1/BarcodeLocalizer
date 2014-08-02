@@ -32,21 +32,11 @@ public class MatrixBarcode extends Barcode {
 
     /**
      * @param args the command line arguments
-     */
-    private double THRESHOLD_T2; // min number of gradient edges in rectangular window to consider as non-zero
-    private double THRESHOLD_MIN_AREA; // min area for candidate region to be considered as a barcode
-
-    private static final double THRESHOLD_T3 = 0.6;  // threshold for ratio of contour area to bounding rectangle area
-    
-    private static final int MAX_ROWS = 300;  //image with more rows than MAX_ROWS is scaled down to make finding barcode easier
-    
-    private Size elem_size, large_elem_size;
+     */        
 
     public MatrixBarcode(String filename) {
         super(filename);
         searchType = CodeType.MATRIX;
-        elem_size = new Size(10, 10);
-        large_elem_size = new Size(12, 12);
 
     }
 
@@ -55,64 +45,16 @@ public class MatrixBarcode extends Barcode {
         DEBUG_IMAGES = debug;
     }
 
-    private void preprocess_image() {
-        // pre-process image to convert to grayscale and do morph black hat
-        // it also reduces image size for large images which helps with processing speed
-        // and reducing sensitivity to barcode size within the image
-        // shrink image if it is above a certain size
-                
-        if(rows > MAX_ROWS){
-            cols = (int) (cols * (MAX_ROWS * 1.0/rows));
-            rows = MAX_ROWS;
-        img_details.src_scaled = new Mat(rows, cols, CvType.CV_32F);
-        Imgproc.resize(img_details.src_original, img_details.src_scaled, img_details.src_scaled.size(), 0, 0, Imgproc.INTER_AREA);                
 
-        }
-        THRESHOLD_MIN_AREA = 0.02 * cols * rows;
-        RECT_HEIGHT = (int) (0.1 * rows);
-        RECT_WIDTH = (int) (0.1 * cols);
-        THRESHOLD_T2 = RECT_HEIGHT * RECT_WIDTH * 0.3;
-                
-        // do pre-processing to increase contrast
-        img_details.src_grayscale = new Mat(rows, cols, CvType.CV_32F);
-        Imgproc.cvtColor(img_details.src_scaled, img_details.src_grayscale, Imgproc.COLOR_RGB2GRAY);
-        Imgproc.morphologyEx(img_details.src_grayscale, img_details.src_grayscale, Imgproc.MORPH_BLACKHAT,
-            Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, elem_size));
-        // do some sharpening to remove anti-aliasing effects for 2D barcodes
-   /*     Mat kernel = Mat.zeros(3, 3, CvType.CV_32F);
-        kernel.put(1, 1, 5);
-        kernel.put(0, 1, -1);
-        kernel.put(2, 1, -1);
-        kernel.put(1, 0, -1);
-        kernel.put(1, 2, -1);
-        
-        Imgproc.filter2D(img_details.src_grayscale, img_details.src_grayscale, -1, kernel);
-    //    Core.normalize(img_details.src_grayscale, img_details.src_grayscale, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
-        //            img_details.src_grayscale.convertTo(img_details.src_grayscale, CvType.CV_8U);
-   //     System.out.println("threshold for " + name + " is " + Imgproc.threshold(img_details.src_grayscale, img_details.src_grayscale, 225, 255, Imgproc.THRESH_BINARY));
-        
-        */
-        write_Mat("greyscale.csv", img_details.src_grayscale);
-        if (DEBUG_IMAGES) {
-            ImageDisplay.showImageFrame(img_details.src_grayscale, "Pre-processed image");
-        }
-    }
-
-    public List<BufferedImage> findBarcode(){
+    protected List<BufferedImage> locateBarcode(){
 
         System.out.println("Searching " + name + " for " + searchType.name());
         preprocess_image();
 
         findCandidates();   // find areas with low variance in gradient direction
 
-        // connect large components by doing morph close followed by morph open
-        // use larger element size for erosion to remove small elements joined by dilation
-        Imgproc.dilate(img_details.E3, img_details.E3, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, elem_size));
-        Imgproc.erode(img_details.E3, img_details.E3, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, large_elem_size));
-
-        Imgproc.erode(img_details.E3, img_details.E3, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, elem_size));
-        Imgproc.dilate(img_details.E3, img_details.E3, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, large_elem_size));
-
+        connectComponents();
+        
         if (DEBUG_IMAGES)
             ImageDisplay.showImageFrame(img_details.E3, "Image img_details.E3 after morph close and open");
 
@@ -130,12 +72,12 @@ public class MatrixBarcode extends Barcode {
             minRect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(i).toArray()));
             bounding_rect_area = minRect.size.width * minRect.size.height;
 
-            if (area < THRESHOLD_MIN_AREA) // ignore contour if it is of too small a region
+            if (area < searchParams.THRESHOLD_MIN_AREA) // ignore contour if it is of too small a region
                 continue;
 
-            if ((area / bounding_rect_area) > THRESHOLD_T3) // check if contour is of a rectangular object
+            if ((area / bounding_rect_area) > searchParams.THRESHOLD_AREA_RATIO) // check if contour is of a rectangular object
             {
-                CandidateBarcode cb = new CandidateBarcode(img_details, minRect);
+                CandidateBarcode cb = new CandidateBarcode(img_details, minRect, searchParams);
                 if(DEBUG_IMAGES)
                     cb.drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
                 // get candidate regions to be a barcode
@@ -190,17 +132,17 @@ public class MatrixBarcode extends Barcode {
         img_details.gradient_direction.convertTo(img_details.gradient_direction, CvType.CV_8U);
         write_Mat("angles.csv", img_details.gradient_direction);
 
-        // calculate magnitude of gradient
+        // calculate magnitude of gradient, normalize and threshold
         img_details.gradient_magnitude = Mat.zeros(scharr_x.size(), scharr_x.type());
         Core.magnitude(scharr_x, scharr_y, img_details.gradient_magnitude);
-        write_Mat("magnitudes_raw.csv", img_details.gradient_magnitude);
+   //     write_Mat("magnitudes_raw.csv", img_details.gradient_magnitude);
         Core.normalize(img_details.gradient_magnitude, img_details.gradient_magnitude, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
-        write_Mat("magnitudes_normalized.csv", img_details.gradient_magnitude);
+   //     write_Mat("magnitudes_normalized.csv", img_details.gradient_magnitude);
         Imgproc.threshold(img_details.gradient_magnitude, img_details.gradient_magnitude, 50, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
         write_Mat("magnitudes.csv", img_details.gradient_magnitude);
 
         probabilities = calcHistogramProbabilities();
-        write_Mat("probabilities_raw.csv", probabilities);
+  //      write_Mat("probabilities_raw.csv", probabilities);
         Core.normalize(probabilities, probabilities, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);        
         System.out.println("Prob threshold is " + Imgproc.threshold(probabilities, probabilities, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU));
         write_Mat("probabilities.csv", probabilities);
@@ -231,8 +173,8 @@ public class MatrixBarcode extends Barcode {
         img_details.gradient_direction.setTo(new Scalar(DUMMY_ANGLE), mask);
         write_Mat("angles_modified.csv", img_details.gradient_direction);
 
-        int width_offset = RECT_WIDTH / 2;
-        int height_offset = RECT_HEIGHT / 2;
+        int width_offset = searchParams.RECT_WIDTH / 2;
+        int height_offset = searchParams.RECT_HEIGHT / 2;
         int rect_area;
         Mat prob_mat = Mat.zeros(rows, cols, CvType.CV_32F);
         double prob, max_angle_count, second_highest_angle_count, angle_diff;
@@ -260,7 +202,8 @@ public class MatrixBarcode extends Barcode {
 
                 rect_area = Core.countNonZero(img_details.gradient_magnitude.submat(Math.max(top_row, 0), bottom_row, Math.max(
                     left_col, 0), right_col));
-                if (rect_area < THRESHOLD_T2) // if gradient density is below the threshold level, prob of matrix code at this pixel is 0
+                
+                if (rect_area < searchParams.THRESHOLD_MIN_GRADIENT_EDGES) // if gradient density is below the threshold level, prob of matrix code at this pixel is 0
                     continue;
                 imgWindow = img_details.gradient_direction.
                     submat(Math.max(top_row, 0), bottom_row, Math.max(left_col, 0), right_col);

@@ -27,12 +27,13 @@ class CandidateBarcode {
     private ImageInfo img_details;
     private RotatedRect minRect;
     private int num_blanks;
+    private SearchParameters params;
 
-    private final int NUM_BLANKS_THRESHOLD = 10;
 
-    CandidateBarcode(ImageInfo img_details, RotatedRect minRect) {
+    CandidateBarcode(ImageInfo img_details, RotatedRect minRect, SearchParameters params) {
         this.img_details = img_details;
         this.minRect = minRect;
+        this.params = params;
     }
 
     void drawCandidateRegion(RotatedRect region, Scalar colour, Mat img) {
@@ -81,7 +82,7 @@ class CandidateBarcode {
         y = minRect.center.y + (long_axis / 2.0) * y_increment;
         x = minRect.center.x + (long_axis / 2.0) * x_increment;
         // start at one edge of candidate region
-        while (isValidCoordinate(x, y) && (num_blanks < NUM_BLANKS_THRESHOLD)) {
+        while (isValidCoordinate(x, y) && (num_blanks < params.NUM_BLANKS_THRESHOLD)) {
             num_blanks = (img_details.searchType == Barcode.CodeType.LINEAR) ? 
                 countQuietZonePixel(y, x) : countMatrixBorderZonePixel(y, x);
             x += x_increment;
@@ -93,7 +94,7 @@ class CandidateBarcode {
         y = minRect.center.y - (long_axis / 2.0) * y_increment;
         x = minRect.center.x - (long_axis / 2.0) * x_increment;
         num_blanks = 0;
-        while (isValidCoordinate(x, y) && (num_blanks < NUM_BLANKS_THRESHOLD)) {
+        while (isValidCoordinate(x, y) && (num_blanks < params.NUM_BLANKS_THRESHOLD)) {
             num_blanks = (img_details.searchType == Barcode.CodeType.LINEAR) ? countQuietZonePixel(y, x) : 
                 countMatrixBorderZonePixel(y, x);
             x -= x_increment;
@@ -120,7 +121,7 @@ class CandidateBarcode {
         double target_magnitude = img_details.E3.get((int) y, (int) x)[0];
 
         // start at "top" of candidate region i.e. moving parallel to barcode lines
-        while (isValidCoordinate(x, y) && (num_blanks < NUM_BLANKS_THRESHOLD)) {
+        while (isValidCoordinate(x, y) && (num_blanks < params.NUM_BLANKS_THRESHOLD)) {
             num_blanks = (img_details.searchType == Barcode.CodeType.LINEAR) ? 
                 countBorderZonePixel(y, x, target_magnitude) : countMatrixBorderZonePixel(y, x);
             x += x_increment;
@@ -132,7 +133,7 @@ class CandidateBarcode {
         y = minRect.center.y - (short_axis / 2.0) * y_increment;
         x = minRect.center.x - (short_axis / 2.0) * x_increment;
         num_blanks = 0;
-        while (isValidCoordinate(x, y) && (num_blanks < NUM_BLANKS_THRESHOLD)) {
+        while (isValidCoordinate(x, y) && (num_blanks < params.NUM_BLANKS_THRESHOLD)) {
             num_blanks = (img_details.searchType == Barcode.CodeType.LINEAR) ? countBorderZonePixel(y, x,
                 target_magnitude) : countMatrixBorderZonePixel(y, x);
             x -= x_increment;
@@ -164,7 +165,7 @@ class CandidateBarcode {
             if (img_details.E3.get(int_y, int_x)[0] == 0)
                 num_blanks++;
             else
-                num_blanks = NUM_BLANKS_THRESHOLD;
+                num_blanks = params.NUM_BLANKS_THRESHOLD;
         else // reset counter if we hit a gradient 
             // - handles situations when we the original captured region only captured part of the barcode
             num_blanks = 0;
@@ -187,11 +188,11 @@ class CandidateBarcode {
 
         if (img_details.gradient_magnitude.get(int_y, int_x)[0] != magnitude)
             // stop when we are following a gradient and hit a non-gradient pixel or vice versa
-            return NUM_BLANKS_THRESHOLD;
+            return params.NUM_BLANKS_THRESHOLD;
 
         if (img_details.E3.get(int_y, int_x)[0] == 255)
             // stop if we hit a high-variance pixel
-            return NUM_BLANKS_THRESHOLD;
+            return params.NUM_BLANKS_THRESHOLD;
 
         // otherwise increment number of low variance pixels and return
         return ++num_blanks;
