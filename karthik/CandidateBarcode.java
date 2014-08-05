@@ -167,7 +167,7 @@ class CandidateBarcode {
             else
                 num_blanks = params.NUM_BLANKS_THRESHOLD;
         else // reset counter if we hit a gradient 
-            // - handles situations when we the original captured region only captured part of the barcode
+            // - handles situations when the original captured region only captured part of the barcode
             num_blanks = 0;
         return num_blanks;
     }
@@ -223,15 +223,6 @@ class CandidateBarcode {
             return false;
 
         return true;
-    }
-
-    private void printPoints(RotatedRect rotRect) {
-
-        Point[] points = new Point[4];
-        rotRect.points(points);
-
-        for (Point p : points)
-            System.out.println("Point coords are x = " + p.x + " y = " + p.y);
     }
 
     private double length(double x1, double y1, double x2, double y2) {

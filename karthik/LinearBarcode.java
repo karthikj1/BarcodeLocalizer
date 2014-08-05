@@ -100,7 +100,8 @@ public class LinearBarcode extends Barcode{
     private Mat postprocess_image(Mat ROI) {
         // filters and sharpens candidate barcode region to make it easier to decode
         Imgproc.cvtColor(ROI, ROI, Imgproc.COLOR_RGB2GRAY);
-    Core.normalize(ROI, ROI, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
+        ROI.convertTo(ROI, CvType.CV_8U);
+//    Core.normalize(ROI, ROI, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
       //  Imgproc.adaptiveThreshold(ROI, ROI, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 11, 0);
         Imgproc.threshold(ROI, ROI, 50, 255, Imgproc.THRESH_TOZERO);
 // resize Region of Interest to 100 rows to make small barcodes more readable

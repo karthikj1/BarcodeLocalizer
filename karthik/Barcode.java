@@ -123,23 +123,63 @@ abstract class Barcode {
         return candidateBarcodes;
     }
     
-       Mat OldNormalizeCandidateRegion(RotatedRect rect) {
-        // rect is the RotatedRect which contains a candidate region for the barcode
-        // returns Mat contaning cropped area(region of interest) with just the barcode
+    Mat NewNormalizeCandidateRegion(RotatedRect ROIRotatedRect) {
+        /* rect is the RotatedRect which contains a candidate region for the barcode
+        // returns Mat containing cropped area(region of interest) with just the barcode 
+        // The barcode region is from the *original* image, not the scaled image
         // the cropped area is also rotated as necessary to be horizontal or vertical rather than skewed
-
-        // matrices we'll use
-        Mat M, rotated, cropped;
+        // 
+        // Some parts of this function are from http://felix.abecassis.me/2011/10/opencv-rotation-deskewing/
+        // and http://stackoverflow.com/questions/22041699/rotate-an-image-without-cropping-in-opencv-in-c
+        */
+        
+        Mat rotation_matrix, rotated, cropped;
         // get angle and size from the bounding box
-        double orientation = rect.angle + 90;
+        double orientation = ROIRotatedRect.angle + 90;
         double rotation_angle;
         
-        Size rect_size = new Size(rect.size.width, rect.size.height);
-        int newSize = (int) Math.sqrt(rect_size.height * rect_size.height + rect_size.width * rect_size.width);
-        rotated = new Mat(newSize, newSize, img_details.src_scaled.type());
+        // scale candidate region back up to original size and return cropped part from *original* image 
+        // need the 1.0 there to force floating-point arithmetic from int values
+        int orig_rows = img_details.src_original.rows();
+        int orig_cols = img_details.src_original.cols();
+        
+        double scale_factor = orig_rows/(1.0 * img_details.src_scaled.rows());        
+        
+        ROIRotatedRect.center.x = ROIRotatedRect.center.x*scale_factor;
+        ROIRotatedRect.center.y = ROIRotatedRect.center.y*scale_factor;
+        ROIRotatedRect.size.height *= scale_factor;
+        ROIRotatedRect.size.width *= scale_factor;
+        
+       
+        Rect boundingRect = ROIRotatedRect.boundingRect();
+        Point centre = new Point(boundingRect.x + boundingRect.width/2, 
+                boundingRect.y + boundingRect.height/2 );
+        Rect rectifiedRect = getBoundingRect(boundingRect, img_details.src_original);
+               
+        Mat targetRegion = img_details.src_original.submat(rectifiedRect);
+        orig_rows = (int) rectifiedRect.height;
+        orig_cols = (int) rectifiedRect.width;
+        
+        int diagonal = (int) Math.sqrt(orig_rows*orig_rows + orig_cols*orig_cols);
+
+        int newWidth = diagonal;
+        int newHeight = diagonal;
+
+        int offsetX = (newWidth - orig_cols) / 2;
+        int offsetY = (newHeight - orig_rows) / 2;
+        centre.x += offsetX;
+        centre.y += offsetY;
+        
+        rotated = new Mat(newWidth, newHeight, img_details.src_original.type());
+        
+        targetRegion.copyTo(rotated.rowRange(offsetY, offsetY + orig_rows).colRange(offsetX, offsetX + orig_cols));
+        // ImageDisplay.showImageFrame(rotated, "Cropped and centered before rotating");
+        ROIRotatedRect.center.x = ROIRotatedRect.center.x - boundingRect.x + offsetX;
+        ROIRotatedRect.center.y = ROIRotatedRect.center.y - boundingRect.y + offsetY;
+        Size rect_size = new Size(ROIRotatedRect.size.width, ROIRotatedRect.size.height);
         cropped = new Mat();
 
-        // find orientation for barcode so that we can extend it along its long axis looking for quiet zone
+        // find orientation for barcode
         if (rect_size.width < rect_size.height) {
             orientation += 90;
             double temp = rect_size.width;
@@ -147,17 +187,36 @@ abstract class Barcode {
             rect_size.height = temp;
         }
 
-        rotation_angle = orientation - 90;
-
-        // below 3 lines and the width-height swapping above from http://felix.abecassis.me/2011/10/opencv-rotation-deskewing/
-        // get the rotation matrix
-        M = Imgproc.getRotationMatrix2D(rect.center, rotation_angle, 1.0);
+        rotation_angle = orientation - 90;  // rotate 90 degress from its orientation to straighten it out               
+        // get the rotation matrix - rotate around rectangle's centre, not image's centre
+        
+//        rotation_matrix = Imgproc.getRotationMatrix2D(ROIRotatedRect.center, rotation_angle, 1.0);
+         rotation_matrix = Imgproc.getRotationMatrix2D(centre, rotation_angle, 1.0);
         // perform the affine transformation
-        Imgproc.warpAffine(img_details.src_scaled, rotated, M, img_details.src_scaled.size(), Imgproc.INTER_CUBIC);
+        Imgproc.warpAffine(rotated, rotated, rotation_matrix, rotated.size(), Imgproc.INTER_CUBIC);
+        // ImageDisplay.showImageFrame(rotated, "rotated and uncropped " + name);
         // crop the resulting image
-        Imgproc.getRectSubPix(rotated, rect_size, rect.center, cropped);
-
+        Imgproc.getRectSubPix(rotated, rect_size, ROIRotatedRect.center, cropped);
+        // ImageDisplay.showImageFrame(cropped, "Cropped and deskewed " + name);
         return cropped;
+    }
+
+    private Rect getBoundingRect(Rect boundingRect, Mat parent){
+    /* rotated rectangle from openCV function minAreaRect can have negative coordinates
+    // which bleeds through to negative coordinates when using openCV function boundingRect
+    // this then creates an error if we try to use those coordinates to extract a sub-matrix
+    // this function returns a bounding rectangle for the given rotated rectangle that has 
+    // valid coordinates relative to the provided source image
+    */
+        // ensure that the top-left is within bounds
+        int x = Math.max(0, boundingRect.x);
+        int y = Math.max(0, boundingRect.y);
+        
+        //ensure that the points in the boundingRect are valid coordinates in the original source image 
+        int width = Math.min(parent.cols() - x - 1, boundingRect.width);
+        int height = Math.min(parent.rows() - y - 1, boundingRect.height);
+        
+        return new Rect(x, y, width, height);
     }
        
     Mat NormalizeCandidateRegion(RotatedRect rect) {
@@ -208,8 +267,7 @@ abstract class Barcode {
             rect_size.height = temp;
         }
 
-        rotation_angle = orientation - 90;  // rotate 90 degress from its orientation to straighten it out       
-        System.out.println("Rotation angle is " + rotation_angle);
+        rotation_angle = orientation - 90;  // rotate 90 degress from its orientation to straighten it out               
         // get the rotation matrix - rotate around rectangle's centre, not image's centre
         rotation_matrix = Imgproc.getRotationMatrix2D(rect.center, rotation_angle, 1.0);
         // perform the affine transformation

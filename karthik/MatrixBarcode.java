@@ -144,7 +144,7 @@ public class MatrixBarcode extends Barcode {
         // calculate probabilities for each pixel from window around it, normalize and threshold
         probabilities = calcHistogramProbabilities();
         Core.normalize(probabilities, probabilities, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);        
-        System.out.println("Prob threshold is " + Imgproc.threshold(probabilities, probabilities, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU));
+        Imgproc.threshold(probabilities, probabilities, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
         
         if (DEBUG_IMAGES){
             write_Mat("probabilities.csv", probabilities);
