@@ -80,7 +80,9 @@ public class LinearBarcode extends Barcode{
                 minRect = cb.getCandidateRegion();
                if(DEBUG_IMAGES)
                     cb.drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_scaled);
-                ROI = NormalizeCandidateRegion(minRect);
+                double barcode_orientation = getBarcodeOrientation(contours, i);
+               
+                ROI = NormalizeCandidateRegion(minRect, barcode_orientation);
                 ROI = postprocess_image(ROI);
                try{
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
@@ -95,37 +97,31 @@ public class LinearBarcode extends Barcode{
             ImageDisplay.showImageFrame(img_details.src_scaled, name + " with candidate regions");
         return candidateBarcodes;
     }
+
+    private double getBarcodeOrientation(List<MatOfPoint> contours, int i) {
+        // get mean angle within contour region so we can rotate by that amount
+        Mat mask = Mat.zeros(img_details.src_scaled.size(), CvType.CV_8U);
+        Mat temp_directions = Mat.zeros(img_details.src_scaled.size(), CvType.CV_8U);
+        Mat temp_magnitudes = Mat.zeros(img_details.src_scaled.size(), CvType.CV_8U);
+        Imgproc.drawContours(mask, contours, i, new Scalar(255), -1); // -1 thickness to fill contour
+        Core.bitwise_and(img_details.gradient_direction, mask, temp_directions);
+        Core.bitwise_and(img_details.gradient_magnitude, mask, temp_magnitudes);
+        // gradient_direction now contains non-zero values only where there is a gradient
+        // mask now contains angles only for pixels within region enclosed by contour
+        double barcode_orientation = 0;
+        for(int r = 0; r < temp_directions.rows();r++)
+            for(int c = 0; c< temp_directions.cols(); c++)
+                barcode_orientation += temp_directions.get(r, c)[0];
+        barcode_orientation = barcode_orientation/Core.countNonZero(temp_magnitudes);
+        return barcode_orientation;
+    }
     
 
     private Mat postprocess_image(Mat ROI) {
         // filters and sharpens candidate barcode region to make it easier to decode
         Imgproc.cvtColor(ROI, ROI, Imgproc.COLOR_RGB2GRAY);
         ROI.convertTo(ROI, CvType.CV_8U);
-//    Core.normalize(ROI, ROI, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
-      //  Imgproc.adaptiveThreshold(ROI, ROI, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 11, 0);
         Imgproc.threshold(ROI, ROI, 50, 255, Imgproc.THRESH_TOZERO);
-// resize Region of Interest to 100 rows to make small barcodes more readable
-/*        int NUM_ROWS = 100;
-        int ROI_rows = ROI.rows();
-        int ROI_cols = ROI.cols();
-        
-            ROI_cols = (int) (ROI_cols * (NUM_ROWS * 1.0/ROI_rows));
-            ROI_rows = NUM_ROWS;
-        
-            Mat temp = new Mat(ROI_rows, ROI_cols, CvType.CV_32F);
-        Imgproc.resize(ROI, temp, temp.size(), 0, 0, Imgproc.INTER_AREA);       
-        ROI = temp;
-        
-              Mat kernel = Mat.zeros(3, 3, CvType.CV_32F);
-        kernel.put(1, 1, 5);
-        kernel.put(0, 1, -1);
-        kernel.put(2, 1, -1);
-        kernel.put(1, 0, -1);
-        kernel.put(1, 2, -1);
-
-        Imgproc.filter2D(ROI, ROI, -1, kernel);
-    Core.normalize(ROI, ROI, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
-  */            
         return ROI;
     }
     
@@ -145,17 +141,7 @@ public class LinearBarcode extends Barcode{
         // calc angle using Core.phase function - should be quicker than using atan2 manually
         Core.phase(scharr_x, scharr_y, img_details.gradient_direction, true);     
         // TODO: implement below using array
-   /*     float[] direction_array = new float[1];
-        img_details.gradient_direction.get(0,0, direction_array);
-     
-        for (int i = 0; i < direction_array.length; i++) {
-            direction_array[i] = direction_array[i] % 180;
-            direction_array[i] = (direction_array[i] > 170) ? 0 : direction_array[i];
-        }
-        
-        img_details.gradient_direction.put(0,0, direction_array);
-        
-     */ double angle;
+        double angle;
         for (int i = 0; i < rows; i++)
             for (int j = 0; j < cols; j++) {
                 angle = img_details.gradient_direction.get(i, j)[0];

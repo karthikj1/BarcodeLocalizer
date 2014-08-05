@@ -37,7 +37,7 @@ abstract class Barcode {
             TRY_NORMAL(1), TRY_SMALL(2), TRY_LARGE(4), TRY_ALL(255);
         
         private int val;
-
+        
         TryHarderFlags(int val) {
             this.val = val;
         }                
@@ -48,7 +48,8 @@ abstract class Barcode {
     };
     // flag to indicate what kind of searches to perform on image to locate barcode
     protected int statusFlags = TryHarderFlags.TRY_NORMAL.value();
-    
+    protected static double USE_ROTATED_RECT_ANGLE = 361;
+
     protected String name;
     
     boolean DEBUG_IMAGES;
@@ -219,8 +220,10 @@ abstract class Barcode {
         return new Rect(x, y, width, height);
     }
        
-    Mat NormalizeCandidateRegion(RotatedRect rect) {
+    Mat NormalizeCandidateRegion(RotatedRect rect, double angle) {
         /* rect is the RotatedRect which contains a candidate region for the barcode
+        // angle is the rotation angle or USE_ROTATED_RECT_ANGLE for this function to 
+        // estimate rotation angle from the rect parameter
         // returns Mat containing cropped area(region of interest) with just the barcode 
         // The barcode region is from the *original* image, not the scaled image
         // the cropped area is also rotated as necessary to be horizontal or vertical rather than skewed
@@ -230,13 +233,11 @@ abstract class Barcode {
         */
         
         Mat rotation_matrix, rotated, cropped;
-        // get angle and size from the bounding box
-        double orientation = rect.angle + 90;
         double rotation_angle;
         
         int orig_rows = img_details.src_original.rows();
         int orig_cols = img_details.src_original.cols();
-        
+        System.out.println("orig centre is " + rect.center.x + ", " + rect.center.y);
         int diagonal = (int) Math.sqrt(orig_rows*orig_rows + orig_cols*orig_cols);
 
         int newWidth = diagonal;
@@ -256,27 +257,53 @@ abstract class Barcode {
         rect.size.height *= scale_factor;
         rect.size.width *= scale_factor;
 
+       // System.out.println("scaled centre is " + rect.center.x + ", " + rect.center.y);
         Size rect_size = new Size(rect.size.width, rect.size.height);
         cropped = new Mat();
-
-        // find orientation for barcode
-        if (rect_size.width < rect_size.height) {
-            orientation += 90;
+        if (rect_size.width < rect_size.height) {            
             double temp = rect_size.width;
             rect_size.width = rect_size.height;
             rect_size.height = temp;
         }
-
-        rotation_angle = orientation - 90;  // rotate 90 degress from its orientation to straighten it out               
-        // get the rotation matrix - rotate around rectangle's centre, not image's centre
-        rotation_matrix = Imgproc.getRotationMatrix2D(rect.center, rotation_angle, 1.0);
+        
+        rotation_angle = estimate_barcode_orientation(rect);
+        System.out.println("Calculated angle " + rotation_angle + " provided " + angle);
+         if(angle != Barcode.USE_ROTATED_RECT_ANGLE)
+            rotation_angle = angle;
+    //    ImageDisplay.showImageFrame(rotated, "Image in larger frame " + name);
+        // get the rotation matrix - rotate around image's centre
+        Point centre = new Point(rotated.rows()/2.0, rotated.cols()/2.0);
+        rotation_matrix = Imgproc.getRotationMatrix2D(centre, rotation_angle, 1.0);
         // perform the affine transformation
         Imgproc.warpAffine(rotated, rotated, rotation_matrix, rotated.size(), Imgproc.INTER_CUBIC);
-   //     ImageDisplay.showImageFrame(rotated, "rotated and uncropped " + name);
+        ImageDisplay.showImageFrame(rotated, "rotated and uncropped " + name);
+        // get the new location for the rectangle's centre
+        System.out.println("Rotation matrix is: \n" + rotation_matrix.dump());
+        double new_x = rotation_matrix.get(0, 2)[0] + rotation_matrix.get(0, 0)[0] * rect.center.x + rotation_matrix.get(0, 1)[0] * rect.center.y;
+        double new_y = rotation_matrix.get(1, 2)[0] + rotation_matrix.get(1, 0)[0] * rect.center.x + rotation_matrix.get(1, 1)[0] * rect.center.y;        
+        Point new_rect_centre = new Point(new_x, new_y);        
+        System.out.println(new_x + " " + new_y);
         // crop the resulting image
-        Imgproc.getRectSubPix(rotated, rect_size, rect.center, cropped);
-    //    ImageDisplay.showImageFrame(cropped, "Cropped and deskewed " + name);
+        Imgproc.getRectSubPix(rotated, rect_size, new_rect_centre, cropped);
+   //     ImageDisplay.showImageFrame(cropped, "Cropped and deskewed " + name);
         return cropped;
+    }
+    
+    private double estimate_barcode_orientation(RotatedRect rect){
+        // uses angle of orientation of enclosing rotated rectangle to rotate barcode
+        // and make it horizontal - only relevant for linear barcodes currently
+              
+        // get angle and size from the bounding box
+        double orientation = rect.angle + 90;
+        double rotation_angle;
+        Size rect_size = new Size(rect.size.width, rect.size.height);
+
+        // find orientation for barcode
+        if (rect_size.width < rect_size.height) 
+            orientation += 90;
+
+        rotation_angle = orientation - 90;  // rotate 90 degrees from its orientation to straighten it out    
+        return rotation_angle;
     }
 
         protected void preprocess_image() {

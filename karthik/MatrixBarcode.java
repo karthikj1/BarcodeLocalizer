@@ -82,7 +82,7 @@ public class MatrixBarcode extends Barcode {
                     cb.drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
                 // get candidate regions to be a barcode
                 minRect = cb.getCandidateRegion();
-                ROI = NormalizeCandidateRegion(minRect);                
+                ROI = NormalizeCandidateRegion(minRect, Barcode.USE_ROTATED_RECT_ANGLE);                
                 try{
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
                 }

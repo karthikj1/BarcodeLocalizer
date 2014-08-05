@@ -25,9 +25,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.io.IOException;
 import java.util.*;
-import javax.imageio.ImageIO;
 
 /**
  *
@@ -47,7 +45,7 @@ public class BarcodeTester {
         boolean test_2D = false;
         Barcode b;
         
-        if(true){
+        if(false){
         for (File f : listOfFiles) {
             s = f.getName();
                 if(test_2D){
@@ -60,7 +58,7 @@ public class BarcodeTester {
         }
         
 
-        images.add(imgDir + fileSeparator + "barcode7.jpg");
+        images.add(imgDir + fileSeparator + "barcode15.jpg");
         if(images.size() > 1)
             show_intermediate_steps = false;
         
@@ -69,7 +67,7 @@ public class BarcodeTester {
                 b = new LinearBarcode(imgFile, show_intermediate_steps);   
             else
                 b = new MatrixBarcode(imgFile, show_intermediate_steps); 
-         //   b.setMultipleFlags(Barcode.TryHarderFlags.TRY_LARGE);
+            // b.setMultipleFlags(Barcode.TryHarderFlags.TRY_LARGE);
             candidateCodes = b.findBarcode();
             for(BufferedImage img: candidateCodes){
                   ImageDisplay.showImageFrame(img, "Tester:" + imgFile + " with cropped candidate barcode");
@@ -80,7 +78,7 @@ public class BarcodeTester {
     
         System.out.println("Now testing with just ZXing");
     
-        for (String imgFile : images) {           
+      /*  for (String imgFile : images) {           
         try{
             System.out.println("ZXing checking " + imgFile);
             BufferedImage img = ImageIO.read(new File(imgFile));
@@ -89,7 +87,7 @@ public class BarcodeTester {
         catch(IOException ioe){
                 System.out.println("ZXing error reading " + imgFile + " " + ioe.getMessage());      
         }
-        }
+        }*/
     }
     
     private static void decodeBarcode(BufferedImage candidate, String filename){
