@@ -42,10 +42,10 @@ public class BarcodeTester {
         List<BufferedImage> candidateCodes = new ArrayList<>();
         String s;
         boolean show_intermediate_steps = true;
-        boolean test_2D = true;
+        boolean test_2D = false;
         Barcode b;
         
-        if(false){
+        if(true){
         for (File f : listOfFiles) {
             s = f.getName();
                 if(test_2D){
@@ -58,7 +58,7 @@ public class BarcodeTester {
         }
         
 
-        images.add(imgDir + fileSeparator + "barcode6.jpg");
+        images.add(imgDir + fileSeparator + "QRCode4.jpg");
         if(images.size() > 1)
             show_intermediate_steps = false;
         
@@ -67,7 +67,7 @@ public class BarcodeTester {
                 b = new LinearBarcode(imgFile, show_intermediate_steps);   
             else
                 b = new MatrixBarcode(imgFile, show_intermediate_steps); 
-             b.setMultipleFlags(Barcode.TryHarderFlags.TRY_SMALL);
+             // b.setMultipleFlags(Barcode.TryHarderFlags.TRY_SMALL);
             candidateCodes = b.findBarcode();
             for(BufferedImage img: candidateCodes){
                   ImageDisplay.showImageFrame(img, "Tester:" + imgFile + " with cropped candidate barcode");
@@ -76,9 +76,9 @@ public class BarcodeTester {
 
         }
     
-        System.out.println("Now testing with just ZXing");
+    /*    System.out.println("Now testing with just ZXing");
     
-      /*  for (String imgFile : images) {           
+        for (String imgFile : images) {           
         try{
             System.out.println("ZXing checking " + imgFile);
             BufferedImage img = ImageIO.read(new File(imgFile));

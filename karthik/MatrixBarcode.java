@@ -33,7 +33,7 @@ public class MatrixBarcode extends Barcode {
     /**
      * @param args the command line arguments
      */        
-
+   
     public MatrixBarcode(String filename) {
         super(filename);
         img_details.searchType = CodeType.MATRIX;
@@ -51,7 +51,7 @@ public class MatrixBarcode extends Barcode {
         System.out.println("Searching " + name + " for " + img_details.searchType.name());
         preprocess_image();
 
-        findCandidates();   // find areas with low variance in gradient direction
+        img_details.E3 = findCandidates();   // find areas with low variance in gradient direction
 
         connectComponents();
         
@@ -75,14 +75,16 @@ public class MatrixBarcode extends Barcode {
             if (area < searchParams.THRESHOLD_MIN_AREA) // ignore contour if it is of too small a region
                 continue;
 
+            
+            System.out.println(area/bounding_rect_area);
             if ((area / bounding_rect_area) > searchParams.THRESHOLD_AREA_RATIO) // check if contour is of a rectangular object
             {
                 CandidateBarcode cb = new CandidateBarcode(img_details, minRect, searchParams);
                 if(DEBUG_IMAGES)
-                    cb.drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
+                    cb.debug_drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
                 // get candidate regions to be a barcode
                 minRect = cb.getCandidateRegion();
-                ROI = NormalizeCandidateRegionWithPerspective(minRect, Barcode.USE_ROTATED_RECT_ANGLE);                
+                ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);                
                 try{
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
                 }
@@ -91,7 +93,7 @@ public class MatrixBarcode extends Barcode {
                     return null;
                 }
                 if (DEBUG_IMAGES) {
-                    cb.drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_original);
+                    cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_original);
                 }
             }
         }
@@ -102,10 +104,9 @@ public class MatrixBarcode extends Barcode {
     }
 
  
-    private void findCandidates() {
+    private Mat findCandidates() {
         // find candidate regions that may contain barcodes
-        // modifies class variable img_details.E3 to contain image img_details.E3
-        // also modifies class variable img_details.gradient_direction to contain gradient directions
+        //  modifies class variable img_details.gradient_direction to contain gradient directions
         Mat probabilities;
         img_details.gradient_direction = Mat.zeros(rows, cols, CvType.CV_32F);
 
@@ -151,14 +152,15 @@ public class MatrixBarcode extends Barcode {
             ImageDisplay.showImageFrame(img_details.gradient_magnitude, "Magnitudes");
             ImageDisplay.showImageFrame(probabilities, "histogram probabilities");            
         }
-        img_details.E3 = probabilities;
+        return probabilities;
     }
 
     private Mat calcHistogramProbabilities() {
         int right_col, left_col, top_row, bottom_row;
         int DUMMY_ANGLE = -1;
         int BIN_WIDTH = 15;
-
+        int HIST_INC = 3;
+    
         MatOfInt hist = new MatOfInt();
         Mat imgWindow; // used to hold sub-matrices from the image that represent the window around the current point
         int bins = 180 / BIN_WIDTH;
@@ -180,16 +182,14 @@ public class MatrixBarcode extends Barcode {
         Mat prob_mat = Mat.zeros(rows, cols, CvType.CV_32F);
         double prob, max_angle_count, second_highest_angle_count, angle_diff;
         int[][] histLocs;
-
-        // TODO: try doing this in increments of every 4 rows or columns to reduce processing times
-        for (int i = 0; i < rows; i++) {
+        for (int i = 0; i < rows; i += HIST_INC) {
             // first calculate the row locations of the rectangle and set them to -1 
             // if they are outside the matrix bounds
 
             top_row = ((i - height_offset - 1) < 0) ? -1 : (i - height_offset - 1);
             bottom_row = ((i + height_offset) > rows) ? rows : (i + height_offset);
 
-            for (int j = 0; j < cols; j++) {
+            for (int j = 0; j < cols; j += HIST_INC) {
                 // first check if there is a gradient at this pixel
                 // no processing needed if so
                 if (img_details.gradient_magnitude.get(i, j)[0] == 0)
@@ -217,15 +217,18 @@ public class MatrixBarcode extends Barcode {
                 angle_diff = Math.abs(histLocs[0][0] - histLocs[1][0]) * BIN_WIDTH;
                 prob = 1 - (Math.abs(angle_diff - 90) / 90.0);
                 prob = prob * 2 * Math.min(max_angle_count, second_highest_angle_count) / (max_angle_count + second_highest_angle_count);
-                prob_mat.put(i, j, prob);
-
+                prob_mat.put(i, j, prob);                             
             }  // for j
-        }  // for i    
-
+        }  // for i
+        // dilate matrix so that each pixel gets dilated to fill a square around it
+        if(HIST_INC > 1){
+            Mat dilation_elem = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(HIST_INC, HIST_INC));
+            Imgproc.morphologyEx(prob_mat, prob_mat, Imgproc.MORPH_DILATE, dilation_elem);
+        }
         return prob_mat;
 
     }
-
+    
     private int[][] getMaxElements(MatOfInt histogram) {
         // returns an array of size 2 containing the indices of the highest two elements in 
         // the histogram in hist. Used by calcHist method - only works with 1D histogram
