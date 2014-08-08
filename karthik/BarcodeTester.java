@@ -42,7 +42,7 @@ public class BarcodeTester {
         List<BufferedImage> candidateCodes = new ArrayList<>();
         String s;
         boolean show_intermediate_steps = true;
-        boolean test_2D = false;
+        boolean test_2D = true;
         Barcode b;
         
         if(false){
@@ -58,7 +58,7 @@ public class BarcodeTester {
         }
         
 
-        images.add(imgDir + fileSeparator + "barcode15.jpg");
+        images.add(imgDir + fileSeparator + "barcode6.jpg");
         if(images.size() > 1)
             show_intermediate_steps = false;
         
@@ -67,7 +67,7 @@ public class BarcodeTester {
                 b = new LinearBarcode(imgFile, show_intermediate_steps);   
             else
                 b = new MatrixBarcode(imgFile, show_intermediate_steps); 
-            // b.setMultipleFlags(Barcode.TryHarderFlags.TRY_LARGE);
+             b.setMultipleFlags(Barcode.TryHarderFlags.TRY_SMALL);
             candidateCodes = b.findBarcode();
             for(BufferedImage img: candidateCodes){
                   ImageDisplay.showImageFrame(img, "Tester:" + imgFile + " with cropped candidate barcode");

@@ -81,8 +81,9 @@ public class LinearBarcode extends Barcode{
                if(DEBUG_IMAGES)
                     cb.drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_scaled);
                 double barcode_orientation = getBarcodeOrientation(contours, i);
-               
-                ROI = NormalizeCandidateRegion(minRect, barcode_orientation);
+                RotatedRect temp = minRect.clone();
+                ROI = NormalizeCandidateRegionWithPerspective(minRect, barcode_orientation);               
+                
                 ROI = postprocess_image(ROI);
                try{
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));

@@ -22,10 +22,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.utils.Converters;
 
 /**
  *
@@ -124,103 +127,7 @@ abstract class Barcode {
         return candidateBarcodes;
     }
     
-    Mat NewNormalizeCandidateRegion(RotatedRect ROIRotatedRect) {
-        /* rect is the RotatedRect which contains a candidate region for the barcode
-        // returns Mat containing cropped area(region of interest) with just the barcode 
-        // The barcode region is from the *original* image, not the scaled image
-        // the cropped area is also rotated as necessary to be horizontal or vertical rather than skewed
-        // 
-        // Some parts of this function are from http://felix.abecassis.me/2011/10/opencv-rotation-deskewing/
-        // and http://stackoverflow.com/questions/22041699/rotate-an-image-without-cropping-in-opencv-in-c
-        */
-        
-        Mat rotation_matrix, rotated, cropped;
-        // get angle and size from the bounding box
-        double orientation = ROIRotatedRect.angle + 90;
-        double rotation_angle;
-        
-        // scale candidate region back up to original size and return cropped part from *original* image 
-        // need the 1.0 there to force floating-point arithmetic from int values
-        int orig_rows = img_details.src_original.rows();
-        int orig_cols = img_details.src_original.cols();
-        
-        double scale_factor = orig_rows/(1.0 * img_details.src_scaled.rows());        
-        
-        ROIRotatedRect.center.x = ROIRotatedRect.center.x*scale_factor;
-        ROIRotatedRect.center.y = ROIRotatedRect.center.y*scale_factor;
-        ROIRotatedRect.size.height *= scale_factor;
-        ROIRotatedRect.size.width *= scale_factor;
-        
-       
-        Rect boundingRect = ROIRotatedRect.boundingRect();
-        Point centre = new Point(boundingRect.x + boundingRect.width/2, 
-                boundingRect.y + boundingRect.height/2 );
-        Rect rectifiedRect = getBoundingRect(boundingRect, img_details.src_original);
-               
-        Mat targetRegion = img_details.src_original.submat(rectifiedRect);
-        orig_rows = (int) rectifiedRect.height;
-        orig_cols = (int) rectifiedRect.width;
-        
-        int diagonal = (int) Math.sqrt(orig_rows*orig_rows + orig_cols*orig_cols);
-
-        int newWidth = diagonal;
-        int newHeight = diagonal;
-
-        int offsetX = (newWidth - orig_cols) / 2;
-        int offsetY = (newHeight - orig_rows) / 2;
-        centre.x += offsetX;
-        centre.y += offsetY;
-        
-        rotated = new Mat(newWidth, newHeight, img_details.src_original.type());
-        
-        targetRegion.copyTo(rotated.rowRange(offsetY, offsetY + orig_rows).colRange(offsetX, offsetX + orig_cols));
-        // ImageDisplay.showImageFrame(rotated, "Cropped and centered before rotating");
-        ROIRotatedRect.center.x = ROIRotatedRect.center.x - boundingRect.x + offsetX;
-        ROIRotatedRect.center.y = ROIRotatedRect.center.y - boundingRect.y + offsetY;
-        Size rect_size = new Size(ROIRotatedRect.size.width, ROIRotatedRect.size.height);
-        cropped = new Mat();
-
-        // find orientation for barcode
-        if (rect_size.width < rect_size.height) {
-            orientation += 90;
-            double temp = rect_size.width;
-            rect_size.width = rect_size.height;
-            rect_size.height = temp;
-        }
-
-        rotation_angle = orientation - 90;  // rotate 90 degress from its orientation to straighten it out               
-        // get the rotation matrix - rotate around rectangle's centre, not image's centre
-        
-//        rotation_matrix = Imgproc.getRotationMatrix2D(ROIRotatedRect.center, rotation_angle, 1.0);
-         rotation_matrix = Imgproc.getRotationMatrix2D(centre, rotation_angle, 1.0);
-        // perform the affine transformation
-        Imgproc.warpAffine(rotated, rotated, rotation_matrix, rotated.size(), Imgproc.INTER_CUBIC);
-        // ImageDisplay.showImageFrame(rotated, "rotated and uncropped " + name);
-        // crop the resulting image
-        Imgproc.getRectSubPix(rotated, rect_size, ROIRotatedRect.center, cropped);
-        // ImageDisplay.showImageFrame(cropped, "Cropped and deskewed " + name);
-        return cropped;
-    }
-
-    private Rect getBoundingRect(Rect boundingRect, Mat parent){
-    /* rotated rectangle from openCV function minAreaRect can have negative coordinates
-    // which bleeds through to negative coordinates when using openCV function boundingRect
-    // this then creates an error if we try to use those coordinates to extract a sub-matrix
-    // this function returns a bounding rectangle for the given rotated rectangle that has 
-    // valid coordinates relative to the provided source image
-    */
-        // ensure that the top-left is within bounds
-        int x = Math.max(0, boundingRect.x);
-        int y = Math.max(0, boundingRect.y);
-        
-        //ensure that the points in the boundingRect are valid coordinates in the original source image 
-        int width = Math.min(parent.cols() - x - 1, boundingRect.width);
-        int height = Math.min(parent.rows() - y - 1, boundingRect.height);
-        
-        return new Rect(x, y, width, height);
-    }
-       
-    Mat NormalizeCandidateRegion(RotatedRect rect, double angle) {
+    Mat _2DNormalizeCandidateRegion(RotatedRect rect, double angle) {
         /* rect is the RotatedRect which contains a candidate region for the barcode
         // angle is the rotation angle or USE_ROTATED_RECT_ANGLE for this function to 
         // estimate rotation angle from the rect parameter
@@ -237,7 +144,7 @@ abstract class Barcode {
         
         int orig_rows = img_details.src_original.rows();
         int orig_cols = img_details.src_original.cols();
-        System.out.println("orig centre is " + rect.center.x + ", " + rect.center.y);
+      //  System.out.println("orig centre is " + rect.center.x + ", " + rect.center.y);
         int diagonal = (int) Math.sqrt(orig_rows*orig_rows + orig_cols*orig_cols);
 
         int newWidth = diagonal;
@@ -267,7 +174,7 @@ abstract class Barcode {
         }
         
         rotation_angle = estimate_barcode_orientation(rect);
-        System.out.println("Calculated angle " + rotation_angle + " provided " + angle);
+      //  System.out.println("Calculated angle " + rotation_angle + " provided " + angle);
          if(angle != Barcode.USE_ROTATED_RECT_ANGLE)
             rotation_angle = angle;
     //    ImageDisplay.showImageFrame(rotated, "Image in larger frame " + name);
@@ -276,17 +183,109 @@ abstract class Barcode {
         rotation_matrix = Imgproc.getRotationMatrix2D(centre, rotation_angle, 1.0);
         // perform the affine transformation
         Imgproc.warpAffine(rotated, rotated, rotation_matrix, rotated.size(), Imgproc.INTER_CUBIC);
-        ImageDisplay.showImageFrame(rotated, "rotated and uncropped " + name);
+       // ImageDisplay.showImageFrame(rotated, "rotated and uncropped " + name);
         // get the new location for the rectangle's centre
-        System.out.println("Rotation matrix is: \n" + rotation_matrix.dump());
+        //System.out.println("Rotation matrix is: \n" + rotation_matrix.dump());
         double new_x = rotation_matrix.get(0, 2)[0] + rotation_matrix.get(0, 0)[0] * rect.center.x + rotation_matrix.get(0, 1)[0] * rect.center.y;
         double new_y = rotation_matrix.get(1, 2)[0] + rotation_matrix.get(1, 0)[0] * rect.center.x + rotation_matrix.get(1, 1)[0] * rect.center.y;        
         Point new_rect_centre = new Point(new_x, new_y);        
-        System.out.println(new_x + " " + new_y);
+       // System.out.println(new_x + " " + new_y);
         // crop the resulting image
         Imgproc.getRectSubPix(rotated, rect_size, new_rect_centre, cropped);
    //     ImageDisplay.showImageFrame(cropped, "Cropped and deskewed " + name);
         return cropped;
+    }
+    
+    Mat NormalizeCandidateRegionWithPerspective(RotatedRect rect, double angle){
+        Mat rotation_matrix, enlarged;
+        double rotation_angle;
+        
+        int orig_rows = img_details.src_original.rows();
+        int orig_cols = img_details.src_original.cols();
+        int diagonal = (int) Math.sqrt(orig_rows*orig_rows + orig_cols*orig_cols);
+
+        int newWidth = diagonal;
+        int newHeight = diagonal;
+
+        int offsetX = (newWidth - orig_cols) / 2;
+        int offsetY = (newHeight - orig_rows) / 2;
+        enlarged = new Mat(newWidth, newHeight, img_details.src_original.type());
+        
+        img_details.src_original.copyTo(enlarged.rowRange(offsetY, offsetY + orig_rows).colRange(offsetX, offsetX + orig_cols));
+        // scale candidate region back up to original size to return cropped part from *original* image 
+        // need the 1.0 there to force floating-point arithmetic from int values
+        double scale_factor = orig_rows/(1.0 * img_details.src_scaled.rows());        
+        
+        // calculate location of rectangle in original image and its corner points
+        rect.center.x = rect.center.x*scale_factor + offsetX;
+        rect.center.y = rect.center.y*scale_factor + offsetY;
+        rect.size.height *= scale_factor;
+        rect.size.width *= scale_factor;
+        Point[] scaledCorners = new Point[4];
+        rect.points(scaledCorners);       
+        
+        rotation_angle = estimate_barcode_orientation(rect);
+  //      System.out.println("CropRectangle: Calculated angle " + rotation_angle + " provided " + angle);
+         if(angle != Barcode.USE_ROTATED_RECT_ANGLE)
+            rotation_angle = angle;
+        
+        Point centre = new Point(enlarged.rows()/2.0, enlarged.cols()/2.0);
+        rotation_matrix = Imgproc.getRotationMatrix2D(centre, rotation_angle, 1.0);
+    //    System.out.println("CropRectangle: Rotation matrix is: \n" + rotation_matrix.dump());
+        // perform the affine transformation
+        rotation_matrix.convertTo(rotation_matrix, CvType.CV_32F); // convert type so matrix multip. works properly
+        List<Point> newCornerPoints = new ArrayList<>();
+        Mat newCornerCoord = Mat.zeros(2, 1, CvType.CV_32F);
+        Mat coord = Mat.ones(3,1, CvType.CV_32F);
+       // calculate the new location for each corner point of the rectangle ROI
+        for(Point p: scaledCorners){
+            coord.put(0, 0, p.x);
+            coord.put(1, 0, p.y);
+            Core.gemm(rotation_matrix, coord, 1, Mat.zeros(3, 3, CvType.CV_32F), 0, newCornerCoord);                         
+            newCornerPoints.add(new Point(newCornerCoord.get(0, 0)[0], newCornerCoord.get(1,0)[0]));
+        }
+        Mat rotated = Mat.zeros(enlarged.size(), enlarged.type());
+        Imgproc.warpAffine(enlarged, rotated, rotation_matrix, enlarged.size(), Imgproc.INTER_CUBIC);
+        // draw circles at calculated location of corner points after rotation
+        
+        Point rectPoints[] = newCornerPoints.toArray(new Point[4]);
+        
+        // sort rectangles points in order by first sorting all 4 points based on x
+        // we then sort the first two based on y and then the next two based on y
+        // this leaves the array in order top-left, bottom-left, top-right, bottom-right
+        Arrays.sort(rectPoints, new compare_x());
+        if(rectPoints[0].y > rectPoints[1].y){
+            Point temp = rectPoints[1];
+            rectPoints[1] = rectPoints[0];
+            rectPoints[0] = temp;
+        }
+        
+        if(rectPoints[2].y > rectPoints[3].y){
+            Point temp = rectPoints[2];
+            rectPoints[2] = rectPoints[3];
+            rectPoints[3] = temp;
+        }
+        
+        newCornerPoints = Arrays.asList(rectPoints);
+  //      ImageDisplay.showImageFrame(rotated, "CropRectangle: rotated and uncropped " + name);
+            // calc height and width of rectangular region
+        double height, width;
+        height = Math.sqrt(Math.pow(rectPoints[1].x - rectPoints[0].x, 2) + Math.pow(rectPoints[1].y - rectPoints[0].y, 2));
+        width = Math.sqrt(Math.pow(rectPoints[2].x - rectPoints[0].x, 2) + Math.pow(rectPoints[2].y - rectPoints[0].y, 2));
+        // create destination points for warpPerspective to map to
+        List<Point> transformedPoints = new ArrayList<>();
+        transformedPoints.add(new Point(0,0));
+        transformedPoints.add(new Point(0,height));
+        transformedPoints.add(new Point(width,0));
+        transformedPoints.add(new Point(width,height));
+        
+        Mat perspectiveTransform = Imgproc.getPerspectiveTransform(Converters.vector_Point2f_to_Mat(newCornerPoints),
+            Converters.vector_Point2f_to_Mat(transformedPoints));
+        Mat perspectiveOut = Mat.zeros((int)height + 2, (int) width + 2, CvType.CV_32F);
+        Imgproc.warpPerspective(rotated, perspectiveOut, perspectiveTransform, perspectiveOut.size(), Imgproc.INTER_CUBIC);
+//        ImageDisplay.showImageFrame(perspectiveOut, "CropRectangle: perspective warped " + name);
+        
+        return perspectiveOut;
     }
     
     private double estimate_barcode_orientation(RotatedRect rect){
@@ -396,37 +395,14 @@ abstract class Barcode {
         return Highgui.imread(filename, Highgui.CV_LOAD_IMAGE_COLOR);
     }
 
-       private Mat calcLines(Mat cropped_ROI, double threshold) {
-        /*
-        calculate number of parallel lines in the image region cropped_ROI
-        */
-        Mat mLines = new Mat();
-        Mat ROI_grayscale = new Mat();
-        Imgproc.cvtColor(cropped_ROI, ROI_grayscale, Imgproc.COLOR_RGB2GRAY);
-        Imgproc.HoughLines(ROI_grayscale, mLines, 10, Math.PI/2, 5);
-        System.out.println("Number of lines is " + mLines.cols());
-        Scalar color = new Scalar(0, 0, 255);
-
-        double[] data;
-        double rho, theta;
-        Point pt1 = new Point();
-        Point pt2 = new Point();
-        double a, b;
-        double x0, y0;
-        for (int i = 0; i < mLines.cols(); i++) {
-            data = mLines.get(0, i);
-            rho = data[0];
-            theta = data[1];
-            a = Math.cos(theta);
-            b = Math.sin(theta);
-            x0 = a * rho;
-            y0 = b * rho;
-            pt1.x = Math.round(x0 + 1000 * (-b));
-            pt1.y = Math.round(y0 + 1000 * a);
-            pt2.x = Math.round(x0 - 1000 * (-b));
-            pt2.y = Math.round(y0 - 1000 * a);
-            Core.line(cropped_ROI, pt1, pt2, color, 1);
+    private class compare_x implements Comparator<Point>{
+        // Comparator class to compare x coordinate of Point objects
+        public int compare(Point a, Point b){
+            if(a.x == b.x)
+                return 0;
+            if(a.x > b.x)
+                return 1;
+            return -1;
         }
-        return cropped_ROI;
-    }      
+    }
 }
