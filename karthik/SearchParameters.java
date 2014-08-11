@@ -42,6 +42,7 @@ class SearchParameters {
     protected double THRESHOLD_MIN_AREA; // min area for candidate region to be considered as a barcode
 
     int NUM_BLANKS_THRESHOLD;
+    int MATRIX_NUM_BLANKS_THRESHOLD;
 
     private SearchParameters() {
     }
@@ -53,7 +54,8 @@ class SearchParameters {
         params.THRESHOLD_MIN_AREA_MULTIPLIER = 0.02;
         params.THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER = 0.3;
 
-        params.NUM_BLANKS_THRESHOLD = 10;
+        params.NUM_BLANKS_THRESHOLD = 20;
+        params.MATRIX_NUM_BLANKS_THRESHOLD = 10;
 
         params.RECT_HEIGHT_MULTIPLIER = 0.1;
         params.RECT_WIDTH_MULTIPLIER = 0.1;
@@ -71,7 +73,8 @@ class SearchParameters {
         params.THRESHOLD_MIN_AREA_MULTIPLIER = 0.02;
         params.THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER = 0.3;
 
-        params.NUM_BLANKS_THRESHOLD = 5;
+        params.NUM_BLANKS_THRESHOLD = 10;
+        params.MATRIX_NUM_BLANKS_THRESHOLD = 5;
 
         params.RECT_HEIGHT_MULTIPLIER = 0.02;
         params.RECT_WIDTH_MULTIPLIER = 0.02;
@@ -90,7 +93,8 @@ class SearchParameters {
         params.THRESHOLD_MIN_AREA_MULTIPLIER = 0.02;
         params.THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER = 0.2;
 
-        params.NUM_BLANKS_THRESHOLD = 20;
+        params.NUM_BLANKS_THRESHOLD = 40;
+        params.MATRIX_NUM_BLANKS_THRESHOLD = 20;
 
         params.RECT_HEIGHT_MULTIPLIER = 0.1;
         params.RECT_WIDTH_MULTIPLIER = 0.1;

@@ -34,12 +34,16 @@ class CandidateBarcode {
     private RotatedRect minRect;
     private int num_blanks;
     private SearchParameters params;
-
+    private int threshold;  // threshold for number of blanks around barcode
+       
 
     CandidateBarcode(ImageInfo img_details, RotatedRect minRect, SearchParameters params) {
         this.img_details = img_details;
         this.minRect = minRect;
         this.params = params;
+       // set threshold for number of blanks around barcode based on whether it is linear or 2D code
+        threshold = (img_details.searchType == Barcode.CodeType.LINEAR) ? params.NUM_BLANKS_THRESHOLD : params.MATRIX_NUM_BLANKS_THRESHOLD;
+
     }
 
     void debug_drawCandidateRegion(RotatedRect region, Scalar colour, Mat img) {
@@ -59,7 +63,6 @@ class CandidateBarcode {
          For matrix barcodes, it finds border zones on all sides
          */
         RotatedRect expanded = new RotatedRect(minRect.center, minRect.size, minRect.angle);
-
         double start_x, start_y, x, y;
 
         // find orientation for barcode so that we can extend it along its long axis looking for quiet zone
@@ -81,15 +84,15 @@ class CandidateBarcode {
          to move parallel to long side from the rectangle's centre
          long_axis * cos(modified theta) moves along y-axis
          long_axis * sin(modified theta) moves along x-axis     
-         cos for x and sin for y are correct - this is because the orientation angle was modified
+         cos for y and sin for x are correct - this is because the orientation angle was modified
          to allow for the weird way openCV RotatedRect records its rotation angle
          */
         num_blanks = 0;
 
-        y = minRect.center.y + (long_axis / 2.0) * y_increment;
-        x = minRect.center.x + (long_axis / 2.0) * x_increment;
+        y = 1 + minRect.center.y + (long_axis / 2.0) * y_increment;
+        x = 1 + minRect.center.x + (long_axis / 2.0) * x_increment;
         // start at one edge of candidate region
-        while (isValidCoordinate(x, y) && (num_blanks < params.NUM_BLANKS_THRESHOLD)) {
+        while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
             num_blanks = (img_details.searchType == Barcode.CodeType.LINEAR) ? 
                 countQuietZonePixel(y, x) : countMatrixBorderZonePixel(y, x);
             x += x_increment;
@@ -98,10 +101,10 @@ class CandidateBarcode {
         start_x = x;
         start_y = y;
         // now expand along other edge
-        y = minRect.center.y - (long_axis / 2.0) * y_increment;
-        x = minRect.center.x - (long_axis / 2.0) * x_increment;
+        y = 1 + minRect.center.y - (long_axis / 2.0) * y_increment;
+        x = 1 + minRect.center.x - (long_axis / 2.0) * x_increment;
         num_blanks = 0;
-        while (isValidCoordinate(x, y) && (num_blanks < params.NUM_BLANKS_THRESHOLD)) {
+        while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
             num_blanks = (img_details.searchType == Barcode.CodeType.LINEAR) ? countQuietZonePixel(y, x) : 
                 countMatrixBorderZonePixel(y, x);
             x -= x_increment;
@@ -123,12 +126,12 @@ class CandidateBarcode {
 
         num_blanks = 0;
 
-        y = minRect.center.y + (short_axis / 2.0) * y_increment;
-        x = minRect.center.x + (short_axis / 2.0) * x_increment;
+        y = 1 + minRect.center.y + (short_axis / 2.0) * y_increment;
+        x = 1 + minRect.center.x + (short_axis / 2.0) * x_increment;
         double target_magnitude = img_details.E3.get((int) y, (int) x)[0];
 
         // start at "top" of candidate region i.e. moving parallel to barcode lines
-        while (isValidCoordinate(x, y) && (num_blanks < params.NUM_BLANKS_THRESHOLD)) {
+        while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
             num_blanks = (img_details.searchType == Barcode.CodeType.LINEAR) ? 
                 countBorderZonePixel(y, x, target_magnitude) : countMatrixBorderZonePixel(y, x);
             x += x_increment;
@@ -137,10 +140,10 @@ class CandidateBarcode {
         start_x = x;
         start_y = y;
         // now expand along "bottom"
-        y = minRect.center.y - (short_axis / 2.0) * y_increment;
-        x = minRect.center.x - (short_axis / 2.0) * x_increment;
+        y = 1 + minRect.center.y - (short_axis / 2.0) * y_increment;
+        x = 1 + minRect.center.x - (short_axis / 2.0) * x_increment;
         num_blanks = 0;
-        while (isValidCoordinate(x, y) && (num_blanks < params.NUM_BLANKS_THRESHOLD)) {
+        while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
             num_blanks = (img_details.searchType == Barcode.CodeType.LINEAR) ? countBorderZonePixel(y, x,
                 target_magnitude) : countMatrixBorderZonePixel(y, x);
             x -= x_increment;
@@ -154,6 +157,90 @@ class CandidateBarcode {
         else
             expanded.size.height = length(x, y, start_x, start_y);
 
+        minRect = expanded;
+        return expanded;
+    }
+
+    RotatedRect getLinearBarcodeCandidateRegion(double barcode_orientation) {
+        /*
+         Takes a candidate linear barcode region and expands it along its axes until it finds the 
+         quiet zone on both sides and a border zone above and below         
+         */
+        RotatedRect expanded = new RotatedRect(minRect.center, minRect.size, minRect.angle);
+
+        double start_x, start_y, x, y;
+
+        expanded.angle = (barcode_orientation > 90) ? barcode_orientation - 180 : barcode_orientation - 90;
+        System.out.println("Expanded barcode angle is " + expanded.angle);
+        // TODO: change this code to increment more than one pixel at a time to improve speed
+        double y_increment = Math.cos(Math.toRadians(barcode_orientation));
+        double x_increment = Math.sin(Math.toRadians(barcode_orientation));
+
+        // expand along short axis of candidate region to include full height of barcode
+
+        num_blanks = 0;
+
+        y = minRect.center.y;
+        x = minRect.center.x;
+        double target_magnitude = img_details.E3.get((int) y, (int) x)[0];
+
+        // start at "top" of candidate region i.e. moving parallel to barcode lines
+        while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
+            num_blanks = countBorderZonePixel(y, x, target_magnitude);
+            x += x_increment;
+            y += y_increment;
+        }
+        start_x = x;
+        start_y = y;
+        // now expand along "bottom"
+        y = minRect.center.y;
+        x = minRect.center.x;
+        num_blanks = 0;
+        while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
+            num_blanks = countBorderZonePixel(y, x, target_magnitude);
+            x -= x_increment;
+            y -= y_increment;
+        }
+        expanded.center.x = (start_x + x) / 2.0;
+        expanded.center.y = (start_y + y) / 2.0;
+
+        expanded.size.height = length(x, y, start_x, start_y);
+        System.out.println("expanded height = " + expanded.size.height);
+        /*
+         to move parallel to long side from the rectangle's centre
+         long_axis * sin(modified theta) moves along y-axis
+         long_axis * cos(modified theta) moves along x-axis     
+         */
+        barcode_orientation = (barcode_orientation + 90) % 180;
+        y_increment = Math.cos(Math.toRadians(barcode_orientation));
+        x_increment = Math.sin(Math.toRadians(barcode_orientation));
+        num_blanks = 0;
+
+        y = minRect.center.y;
+        x = minRect.center.x;
+        // start at one edge of candidate region
+        while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
+            num_blanks = countQuietZonePixel(y, x);
+            x += x_increment;
+            y += y_increment;
+        }
+        start_x = x;
+        start_y = y;
+        // now expand along other edge
+        y = minRect.center.y;
+        x = minRect.center.x;
+        num_blanks = 0;
+        while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
+            num_blanks = countQuietZonePixel(y, x);
+            x -= x_increment;
+            y -= y_increment;
+        }
+        expanded.center.x = (start_x + x) / 2.0;
+        expanded.center.y = (start_y + y) / 2.0;
+
+        expanded.size.width = length(x, y, start_x, start_y);
+        System.out.println("expanded width = " + expanded.size.width);
+        
         minRect = expanded;
         return expanded;
     }
@@ -173,7 +260,7 @@ class CandidateBarcode {
             if (img_details.E3.get(int_y, int_x)[0] == 0)
                 num_blanks++;
             else
-                num_blanks = params.NUM_BLANKS_THRESHOLD;
+                num_blanks = threshold;
         else // reset counter if we hit a gradient 
             // - handles situations when the original captured region only captured part of the barcode
             num_blanks = 0;
@@ -315,11 +402,11 @@ class CandidateBarcode {
 
         if (img_details.gradient_magnitude.get(int_y, int_x)[0] != magnitude)
             // stop when we are following a gradient and hit a non-gradient pixel or vice versa
-            return params.NUM_BLANKS_THRESHOLD;
+            return threshold;
 
-        if (img_details.E3.get(int_y, int_x)[0] == 255)
+        if (img_details.E3.get(int_y, int_x)[0] == 0)
             // stop if we hit a high-variance pixel
-            return params.NUM_BLANKS_THRESHOLD;
+            return threshold;
 
         // otherwise increment number of low variance pixels and return
         return ++num_blanks;

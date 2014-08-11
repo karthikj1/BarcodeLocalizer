@@ -52,9 +52,10 @@ public class LinearBarcode extends Barcode{
         findCandidates();   // find areas with low variance in gradient direction
         connectComponents();
         
-       if(DEBUG_IMAGES)
+       if(DEBUG_IMAGES){
+            write_Mat("E3.csv", img_details.E3);
             ImageDisplay.showImageFrame(img_details.E3, "Image E3 after morph close and open");
-
+       }
         List<MatOfPoint> contours = new ArrayList<>();
                 // findContours modifies source image so we pass it a copy of img_details.E3
         // img_details.E3 will be used again shortly to expand the barcode region
@@ -74,7 +75,7 @@ public class LinearBarcode extends Barcode{
             if ((area / bounding_rect_area) > searchParams.THRESHOLD_AREA_RATIO) // check if contour is of a rectangular object
             {
                 CandidateBarcode cb = new CandidateBarcode(img_details, minRect, searchParams);
-                double barcode_orientation = getBarcodeOrientation(contours, i);
+                double barcode_orientation = getBarcodeOrientation(contours, i);                
                 // get candidate regions to be a barcode
                 if(DEBUG_IMAGES)
                      cb.debug_drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
@@ -83,7 +84,7 @@ public class LinearBarcode extends Barcode{
                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_scaled);                                
                 ROI = cb.NormalizeCandidateRegion(barcode_orientation);               
                 
-                ROI = postprocess_image(ROI);
+             //   ROI = postprocess_image(ROI);
                try{
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
                 }
@@ -100,19 +101,20 @@ public class LinearBarcode extends Barcode{
 
     private double getBarcodeOrientation(List<MatOfPoint> contours, int i) {
         // get mean angle within contour region so we can rotate by that amount
+        
         Mat mask = Mat.zeros(img_details.src_scaled.size(), CvType.CV_8U);
         Mat temp_directions = Mat.zeros(img_details.src_scaled.size(), CvType.CV_8U);
         Mat temp_magnitudes = Mat.zeros(img_details.src_scaled.size(), CvType.CV_8U);
+        
         Imgproc.drawContours(mask, contours, i, new Scalar(255), -1); // -1 thickness to fill contour
         Core.bitwise_and(img_details.gradient_direction, mask, temp_directions);
         Core.bitwise_and(img_details.gradient_magnitude, mask, temp_magnitudes);
         // gradient_direction now contains non-zero values only where there is a gradient
         // mask now contains angles only for pixels within region enclosed by contour
-        double barcode_orientation = 0;
-        for(int r = 0; r < temp_directions.rows();r++)
-            for(int c = 0; c< temp_directions.cols(); c++)
-                barcode_orientation += temp_directions.get(r, c)[0];
+
+        double barcode_orientation = Core.sumElems(temp_directions).val[0];
         barcode_orientation = barcode_orientation/Core.countNonZero(temp_magnitudes);
+        
         return barcode_orientation;
     }
     

@@ -74,9 +74,7 @@ public class MatrixBarcode extends Barcode {
 
             if (area < searchParams.THRESHOLD_MIN_AREA) // ignore contour if it is of too small a region
                 continue;
-
-            
-            System.out.println(area/bounding_rect_area);
+                        
             if ((area / bounding_rect_area) > searchParams.THRESHOLD_AREA_RATIO) // check if contour is of a rectangular object
             {
                 CandidateBarcode cb = new CandidateBarcode(img_details, minRect, searchParams);
