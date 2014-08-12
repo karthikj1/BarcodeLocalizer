@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package karthik;
+
 
 import com.google.zxing.*;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
@@ -28,6 +28,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.*;
 import javax.imageio.ImageIO;
+import karthik.Barcode;
+import karthik.ImageDisplay;
+import karthik.LinearBarcode;
+import karthik.MatrixBarcode;
 
 /**
  *
@@ -44,10 +48,10 @@ public class BarcodeTester {
         List<BufferedImage> candidateCodes = new ArrayList<>();
         String s;
         boolean show_intermediate_steps = true;
-        boolean test_2D = true;
+        boolean test_2D = false;
         Barcode b;
 
-        if (false)
+        if (true)
             for (File f : listOfFiles) {
                 s = f.getName();
                 if (test_2D) {
@@ -57,7 +61,7 @@ public class BarcodeTester {
                     images.add(imgDir + fileSeparator + s);
             }
 
-        images.add(imgDir + fileSeparator + "barcode3.jpg");
+        images.add(imgDir + fileSeparator + "barcode2.jpg");
         if (images.size() > 1)
             show_intermediate_steps = false;
 
@@ -94,32 +98,43 @@ public class BarcodeTester {
     }
 
     private static void decodeBarcode(List<BufferedImage> candidateCodes, String filename, String caption) {
-        
+
         BufferedImage decodedBarcode = null;
         String title = null;
-        
-        for(BufferedImage candidate: candidateCodes){
-        LuminanceSource source = new BufferedImageLuminanceSource(candidate);
-        BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
-        Reader reader = new MultiFormatReader();
 
-        Map<DecodeHintType, Boolean> hints = new HashMap<>();
-        hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
-        try {
-            Result result = reader.decode(bitmap, hints);
-            decodedBarcode = candidate;
-            title = filename + " " + caption + " - barcode text " + result.getText();
-            System.out.println("Barcode text for " + filename + " is " + result.getText());
-        } catch (NotFoundException nfe) {
-            System.out.println("ZXing - Could not find a barcode in " + filename + " " + nfe.getMessage());
-        } catch (ChecksumException cse) {
-            System.out.println("ZXing - Barcode failed checksum: " + cse.getMessage());
-        } catch (FormatException fe) {
-            System.out.println("ZXing - Barcode format was invalid: " + fe.getMessage());
+        for (BufferedImage candidate : candidateCodes) {
+            
+            try{
+            ImageIO.write(candidate, "JPG", new File("Candidate.jpg"));
+            }
+            catch(IOException ioe){
+                System.out.println(ioe.getMessage());
+            }
+            
+            LuminanceSource source = new BufferedImageLuminanceSource(candidate);
+            BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+            Reader reader = new MultiFormatReader();
+
+            Map<DecodeHintType, Boolean> hints = new HashMap<>();
+            hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);            
+            try {
+                Result result = reader.decode(bitmap, hints);
+                decodedBarcode = candidate;
+                title = filename + " " + caption + " - barcode text " + result.getText();
+                System.out.println("Barcode text for " + filename + " is " + result.getText());
+            } catch (NotFoundException nfe) {
+                System.out.println("ZXing - Could not find a barcode in " + filename + " " + nfe.getMessage());
+            } catch (ChecksumException cse) {
+                System.out.println("ZXing - Barcode failed checksum: " + cse.getMessage());
+            } catch (FormatException fe) {
+                System.out.println("ZXing - Barcode format was invalid: " + fe.getMessage());
+            }
         }
-        }
-        
-        if(decodedBarcode != null)
-            ImageDisplay.showImageFrame(decodedBarcode, title);                    
+
+        if (decodedBarcode == null)
+            for (BufferedImage candidate : candidateCodes)
+                ImageDisplay.showImageFrame(candidate, filename + " " + caption + " - no barcode found");
+        else
+            ImageDisplay.showImageFrame(decodedBarcode, title);
     }
 }

@@ -83,10 +83,7 @@ public class LinearBarcode extends Barcode{
                if(DEBUG_IMAGES)
                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_scaled);                                
                 ROI = cb.NormalizeCandidateRegion(barcode_orientation);               
-               
-           //     if((statusFlags & TryHarderFlags.POSTPROCESS.value()) != 0)
-           //         ROI = postprocess_image(ROI);    
-                
+                               
                 if((statusFlags & TryHarderFlags.RESIZE_BEFORE_DECODE.value()) != 0)
                     ROI = scale_candidateBarcode(ROI);               
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
@@ -116,14 +113,6 @@ public class LinearBarcode extends Barcode{
         return barcode_orientation;
     }
     
-
-    private Mat postprocess_image(Mat ROI) {
-        // filters and sharpens candidate barcode region to make it easier to decode
-        Imgproc.cvtColor(ROI, ROI, Imgproc.COLOR_RGB2GRAY);
-        ROI.convertTo(ROI, CvType.CV_8U);
-        Imgproc.threshold(ROI, ROI, 50, 255, Imgproc.THRESH_TOZERO);
-        return ROI;
-    }
     
     private void findCandidates() {        
     // find candidate regions that could contain barcodes

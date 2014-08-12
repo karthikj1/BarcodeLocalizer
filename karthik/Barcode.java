@@ -34,7 +34,7 @@ import org.opencv.imgproc.Imgproc;
 public abstract class Barcode {
 
     public static enum TryHarderFlags {
-            NORMAL(1), SMALL(2), LARGE(4), POSTPROCESS(8), RESIZE_BEFORE_DECODE(16), ALL(255);
+            NORMAL(1), SMALL(2), LARGE(4), ALL_SIZES(7), RESIZE_BEFORE_DECODE(8), ALL(255);
         
         private int val;
         
@@ -94,8 +94,12 @@ public abstract class Barcode {
     public void setMultipleFlags(TryHarderFlags... flags){
         // clears the flags and sets it to only the ones specified in the argument list
         statusFlags = 0;
+        
         for (TryHarderFlags flag : flags)
             setOneFlag(flag);
+        // at least one of the size flags must be set so it chooses NORMAL as the default if nothing is set
+        if((statusFlags & TryHarderFlags.ALL_SIZES.value()) == 0)
+            setOneFlag(TryHarderFlags.NORMAL);
     }
     
     // actual locateBarcode algo must be implemented in child class
@@ -145,21 +149,31 @@ public abstract class Barcode {
     }
         
     protected Mat scale_candidateBarcode(Mat candidate){
-        // resizes candidate image to have at least MIN_COLS columns
+        // resizes candidate image to have at least MIN_COLS columns and MIN_ROWS rows
         // called when RESIZE_BEFORE_DECODE is set - seems to help ZXing decode barcode
         // TODO: combine this into one function with scaleImage
         int MIN_COLS = 100;
+        int MIN_ROWS = 100;
         
         int num_rows = candidate.rows();
-        int num_cols = candidate.cols();        
+        int num_cols = candidate.cols();                        
         
-        if(candidate.cols() > 100)
+        if((num_cols > MIN_COLS) && (num_rows > MIN_ROWS))
             return candidate;
         
-        int new_rows = (int) (num_rows * MIN_COLS/(1.0 * num_cols));
-        Mat result = Mat.zeros(new_rows, MIN_COLS, candidate.type());
+        if(num_cols < MIN_COLS){
+            num_rows = (int) (num_rows * MIN_COLS/(1.0 * num_cols));
+            num_cols= MIN_COLS;
+        }
         
-        Imgproc.resize(candidate, result, result.size(), 0, 0, Imgproc.INTER_AREA);
+        if(num_rows < MIN_ROWS){
+            num_cols = (int) (num_cols * MIN_ROWS/(1.0 * num_rows));
+            num_rows = MIN_ROWS;
+        }
+        
+        Mat result = Mat.zeros(num_rows, num_cols, candidate.type());
+        
+        Imgproc.resize(candidate, result, result.size(), 0, 0, Imgproc.INTER_CUBIC);
         return result;
     }
 
