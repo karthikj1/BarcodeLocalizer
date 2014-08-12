@@ -46,7 +46,7 @@ public class MatrixBarcode extends Barcode {
     }
 
 
-    protected List<BufferedImage> locateBarcode(){
+    protected List<BufferedImage> locateBarcode() throws IOException{
 
         System.out.println("Searching " + name + " for " + img_details.searchType.name());
         preprocess_image();
@@ -82,14 +82,12 @@ public class MatrixBarcode extends Barcode {
                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
                 // get candidate regions to be a barcode
                 minRect = cb.getCandidateRegion();
-                ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);                
-                try{
+                ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);  
+
+                if((statusFlags & TryHarderFlags.RESIZE_BEFORE_DECODE.value()) != 0)
+                    ROI = scale_candidateBarcode(ROI);               
+                
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
-                }
-                catch(IOException ioe){
-                    System.out.println("Error when creating image " + ioe.getMessage());
-                    return null;
-                }
                 if (DEBUG_IMAGES) {
                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_original);
                 }

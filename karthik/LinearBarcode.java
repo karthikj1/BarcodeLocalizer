@@ -44,7 +44,7 @@ public class LinearBarcode extends Barcode{
         DEBUG_IMAGES = debug;
     }
     
-    protected List<BufferedImage> locateBarcode() {
+    protected List<BufferedImage> locateBarcode() throws IOException{
 
         System.out.println("Searching " + name + " for " + img_details.searchType.name());
         preprocess_image();
@@ -83,15 +83,13 @@ public class LinearBarcode extends Barcode{
                if(DEBUG_IMAGES)
                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_scaled);                                
                 ROI = cb.NormalizeCandidateRegion(barcode_orientation);               
+               
+           //     if((statusFlags & TryHarderFlags.POSTPROCESS.value()) != 0)
+           //         ROI = postprocess_image(ROI);    
                 
-             //   ROI = postprocess_image(ROI);
-               try{
+                if((statusFlags & TryHarderFlags.RESIZE_BEFORE_DECODE.value()) != 0)
+                    ROI = scale_candidateBarcode(ROI);               
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
-                }
-                catch(IOException ioe){
-                    System.out.println("Error when creating image " + ioe.getMessage());
-                    return null;
-                }
              }
         }
         if(DEBUG_IMAGES)

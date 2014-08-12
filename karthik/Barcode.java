@@ -31,10 +31,10 @@ import org.opencv.imgproc.Imgproc;
  *
  * @author karthik
  */
-abstract class Barcode {
+public abstract class Barcode {
 
     public static enum TryHarderFlags {
-            TRY_NORMAL(1), TRY_SMALL(2), TRY_LARGE(4), TRY_ALL(255);
+            NORMAL(1), SMALL(2), LARGE(4), POSTPROCESS(8), RESIZE_BEFORE_DECODE(16), ALL(255);
         
         private int val;
         
@@ -47,7 +47,7 @@ abstract class Barcode {
         }
     };
     // flag to indicate what kind of searches to perform on image to locate barcode
-    protected int statusFlags = TryHarderFlags.TRY_NORMAL.value();
+    protected int statusFlags = TryHarderFlags.NORMAL.value();
     protected static double USE_ROTATED_RECT_ANGLE = 361;
 
     protected String name;
@@ -87,7 +87,7 @@ abstract class Barcode {
     }
     
     public void resetFlags(){
-        statusFlags = TryHarderFlags.TRY_NORMAL.value();
+        statusFlags = TryHarderFlags.NORMAL.value();
     }
     
 
@@ -99,28 +99,28 @@ abstract class Barcode {
     }
     
     // actual locateBarcode algo must be implemented in child class
-    protected abstract List<BufferedImage> locateBarcode();
+    protected abstract List<BufferedImage> locateBarcode() throws IOException;
     
-    public List<BufferedImage> findBarcode() {
+    public List<BufferedImage> findBarcode() throws IOException{
         /*
         finds barcodes using searches according to the flags set in statusFlags
         */
 
-        if ((statusFlags & TryHarderFlags.TRY_NORMAL.value()) != 0) {
+        if ((statusFlags & TryHarderFlags.NORMAL.value()) != 0) {
             searchParams = SearchParameters.getNormalParameters();
             locateBarcode();
         }
         
-        if ((statusFlags & TryHarderFlags.TRY_SMALL.value()) != 0) {
+        if ((statusFlags & TryHarderFlags.SMALL.value()) != 0) {
             searchParams = SearchParameters.getSmallParameters();
             locateBarcode();
         }
         
-        if ((statusFlags & TryHarderFlags.TRY_LARGE.value()) != 0) {
+        if ((statusFlags & TryHarderFlags.LARGE.value()) != 0) {
             searchParams = SearchParameters.getLargeParameters();
             locateBarcode();
         }
-        
+
         return candidateBarcodes;
     }
 
@@ -142,6 +142,25 @@ abstract class Barcode {
             write_Mat("greyscale.csv", img_details.src_grayscale);
             ImageDisplay.showImageFrame(img_details.src_grayscale, "Pre-processed image");
         }
+    }
+        
+    protected Mat scale_candidateBarcode(Mat candidate){
+        // resizes candidate image to have at least MIN_COLS columns
+        // called when RESIZE_BEFORE_DECODE is set - seems to help ZXing decode barcode
+        // TODO: combine this into one function with scaleImage
+        int MIN_COLS = 100;
+        
+        int num_rows = candidate.rows();
+        int num_cols = candidate.cols();        
+        
+        if(candidate.cols() > 100)
+            return candidate;
+        
+        int new_rows = (int) (num_rows * MIN_COLS/(1.0 * num_cols));
+        Mat result = Mat.zeros(new_rows, MIN_COLS, candidate.type());
+        
+        Imgproc.resize(candidate, result, result.size(), 0, 0, Imgproc.INTER_AREA);
+        return result;
     }
 
     protected void connectComponents() {
