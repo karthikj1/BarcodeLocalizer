@@ -46,7 +46,6 @@ public class LinearBarcode extends Barcode{
     
     protected List<BufferedImage> locateBarcode() throws IOException{
 
-        System.out.println("Searching " + name + " for " + img_details.searchType.name());
         preprocess_image();
 
         findCandidates();   // find areas with low variance in gradient direction
@@ -84,8 +83,7 @@ public class LinearBarcode extends Barcode{
                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_scaled);                                
                 ROI = cb.NormalizeCandidateRegion(barcode_orientation);               
                                
-                if((statusFlags & TryHarderFlags.RESIZE_BEFORE_DECODE.value()) != 0)
-                    ROI = scale_candidateBarcode(ROI);               
+                ROI = scale_candidateBarcode(ROI);               
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
              }
         }
@@ -189,7 +187,7 @@ public class LinearBarcode extends Barcode{
             write_Mat("angles_modified.csv", img_details.gradient_direction);        
         
         Imgproc.integral2(img_details.gradient_direction, integral_gradient_directions, integral_sumsq, CvType.CV_32F);
-
+        //TODO: look into doing tnis for alternate pixels similar to 2D barcode
         for (int i = 0; i < rows; i++) {
             // first calculate the row locations of the rectangle and set them to -1 
             // if they are outside the matrix bounds

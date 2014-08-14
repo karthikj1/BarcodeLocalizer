@@ -34,7 +34,7 @@ import org.opencv.imgproc.Imgproc;
 public abstract class Barcode {
 
     public static enum TryHarderFlags {
-            NORMAL(1), SMALL(2), LARGE(4), ALL_SIZES(7), RESIZE_BEFORE_DECODE(8), ALL(255);
+            NORMAL(1), SMALL(2), LARGE(4), ALL_SIZES(7), ALL(255);
         
         private int val;
         
@@ -152,8 +152,8 @@ public abstract class Barcode {
         // resizes candidate image to have at least MIN_COLS columns and MIN_ROWS rows
         // called when RESIZE_BEFORE_DECODE is set - seems to help ZXing decode barcode
         // TODO: combine this into one function with scaleImage
-        int MIN_COLS = 100;
-        int MIN_ROWS = 100;
+        int MIN_COLS = 200;
+        int MIN_ROWS = 200;
         
         int num_rows = candidate.rows();
         int num_cols = candidate.cols();                        

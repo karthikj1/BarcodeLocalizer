@@ -48,7 +48,6 @@ public class MatrixBarcode extends Barcode {
 
     protected List<BufferedImage> locateBarcode() throws IOException{
 
-        System.out.println("Searching " + name + " for " + img_details.searchType.name());
         preprocess_image();
 
         img_details.E3 = findCandidates();   // find areas with low variance in gradient direction
@@ -83,9 +82,8 @@ public class MatrixBarcode extends Barcode {
                 // get candidate regions to be a barcode
                 minRect = cb.getCandidateRegion();
                 ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);  
-
-                if((statusFlags & TryHarderFlags.RESIZE_BEFORE_DECODE.value()) != 0)
-                    ROI = scale_candidateBarcode(ROI);               
+                
+                ROI = scale_candidateBarcode(ROI);               
                 
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
                 if (DEBUG_IMAGES) {
@@ -153,9 +151,9 @@ public class MatrixBarcode extends Barcode {
 
     private Mat calcHistogramProbabilities() {
         int right_col, left_col, top_row, bottom_row;
-        int DUMMY_ANGLE = -1;
+        int DUMMY_ANGLE = 255;
         int BIN_WIDTH = 15;
-        int HIST_INC = 3;
+        int HIST_INC = 1;
     
         MatOfInt hist = new MatOfInt();
         Mat imgWindow; // used to hold sub-matrices from the image that represent the window around the current point
@@ -165,8 +163,8 @@ public class MatrixBarcode extends Barcode {
         MatOfFloat mRanges = new MatOfFloat(0, 179);
         MatOfInt mChannels = new MatOfInt(0);
 
-        // set angle to -1 at all points where gradient magnitude is 0 i.e. where there are no edges
-        // these angles will be ignored in the histogram calculation
+        // set angle to DUMMY_ANGLE = 255 at all points where gradient magnitude is 0 i.e. where there are no edges
+        // these angles will be ignored in the histogram calculation since that counts only up to 180
         Mat mask = Mat.zeros(img_details.gradient_direction.size(), CvType.CV_8U);
         Core.inRange(img_details.gradient_magnitude, new Scalar(0), new Scalar(0), mask);
         img_details.gradient_direction.setTo(new Scalar(DUMMY_ANGLE), mask);
