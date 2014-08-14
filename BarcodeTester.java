@@ -60,7 +60,7 @@ public class BarcodeTester {
                     images.add(imgDir + fileSeparator + s);
             }
 
-        images.add(imgDir + fileSeparator + "barcode9.jpg");
+        images.add(imgDir + fileSeparator + "barcode3.jpg");
         if (images.size() > 1)
             show_intermediate_steps = false;
 
@@ -70,7 +70,7 @@ public class BarcodeTester {
             else
                 b = new MatrixBarcode(imgFile, show_intermediate_steps);
 
-            b.setMultipleFlags(Barcode.TryHarderFlags.ALL_SIZES);
+            b.setMultipleFlags(Barcode.TryHarderFlags.SMALL);
             try {
                 candidateCodes = b.findBarcode();
             } catch (IOException ioe) {
