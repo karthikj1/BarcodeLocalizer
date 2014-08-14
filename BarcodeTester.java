@@ -54,13 +54,13 @@ public class BarcodeTester {
             for (File f : listOfFiles) {
                 s = f.getName();
                 if (test_2D) {
-                    if (s.matches("(?i).*?(QR|Matrix).*?.[jpg|png]"))
+                    if (s.matches("(?i).*?(QR|Matrix).*?.[jpg|png|gif]"))
                         images.add(imgDir + fileSeparator + s);
-                } else if (s.matches("(?i).*?barcode.*?.[jpg|png]"))
+                } else if (s.matches("(?i).*?barcode.*?.[jpg|png|gif]"))
                     images.add(imgDir + fileSeparator + s);
             }
 
-        images.add(imgDir + fileSeparator + "barcode3.jpg");
+        images.add(imgDir + fileSeparator + "QRCode14.jpg");
         if (images.size() > 1)
             show_intermediate_steps = false;
 
@@ -70,7 +70,7 @@ public class BarcodeTester {
             else
                 b = new MatrixBarcode(imgFile, show_intermediate_steps);
 
-            b.setMultipleFlags(Barcode.TryHarderFlags.SMALL);
+            b.setMultipleFlags(Barcode.TryHarderFlags.NORMAL);
             try {
                 candidateCodes = b.findBarcode();
             } catch (IOException ioe) {

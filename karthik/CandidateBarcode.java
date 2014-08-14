@@ -76,7 +76,11 @@ class CandidateBarcode {
         // TODO: change this code to increment more than one pixel at a time to improve speed
         double y_increment = Math.cos(Math.toRadians(barcode_orientation));
         double x_increment = Math.sin(Math.toRadians(barcode_orientation));
-
+        /*
+         * used to adjust the boundaries of the search area to avoid some issues created by rounding the pixel address
+        */
+        double adjust_y = Math.signum(y_increment);
+        double adjust_x = Math.signum(x_increment);
         /*
          we calculate long_axis manually above because width and height parameters
          in RotatedRect don't reliably choose between longer of X or Y-axis
@@ -89,8 +93,8 @@ class CandidateBarcode {
          */
         num_blanks = 0;
 
-        y = 1 + minRect.center.y + (long_axis / 2.0) * y_increment;
-        x = 1 + minRect.center.x + (long_axis / 2.0) * x_increment;
+        y = adjust_y + minRect.center.y + (long_axis / 2.0) * y_increment;
+        x = adjust_x + minRect.center.x + (long_axis / 2.0) * x_increment;
         // start at one edge of candidate region
         while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
             num_blanks = (img_details.searchType == Barcode.CodeType.LINEAR) ? 
@@ -101,9 +105,10 @@ class CandidateBarcode {
         start_x = x;
         start_y = y;
         // now expand along other edge
-        y = 1 + minRect.center.y - (long_axis / 2.0) * y_increment;
-        x = 1 + minRect.center.x - (long_axis / 2.0) * x_increment;
+        y = minRect.center.y - (long_axis / 2.0) * y_increment - adjust_y;
+        x = minRect.center.x - (long_axis / 2.0) * x_increment - adjust_x;
         num_blanks = 0;
+        //TODO: remove this
         while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
             num_blanks = (img_details.searchType == Barcode.CodeType.LINEAR) ? countQuietZonePixel(y, x) : 
                 countMatrixBorderZonePixel(y, x);
@@ -123,11 +128,13 @@ class CandidateBarcode {
 
         y_increment = Math.cos(Math.toRadians(barcode_orientation));
         x_increment = Math.sin(Math.toRadians(barcode_orientation));
+        adjust_y = Math.signum(y_increment);
+        adjust_x = Math.signum(x_increment);
 
         num_blanks = 0;
 
-        y = 1 + minRect.center.y + (short_axis / 2.0) * y_increment;
-        x = 1 + minRect.center.x + (short_axis / 2.0) * x_increment;
+        y = adjust_y + minRect.center.y + (short_axis / 2.0) * y_increment;
+        x = adjust_x + minRect.center.x + (short_axis / 2.0) * x_increment;
         double target_magnitude = img_details.E3.get((int) y, (int) x)[0];
 
         // start at "top" of candidate region i.e. moving parallel to barcode lines
@@ -140,8 +147,8 @@ class CandidateBarcode {
         start_x = x;
         start_y = y;
         // now expand along "bottom"
-        y = 1 + minRect.center.y - (short_axis / 2.0) * y_increment;
-        x = 1 + minRect.center.x - (short_axis / 2.0) * x_increment;
+        y = minRect.center.y - (short_axis / 2.0) * y_increment - adjust_y;
+        x = minRect.center.x - (short_axis / 2.0) * x_increment - adjust_x;
         num_blanks = 0;
         while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
             num_blanks = (img_details.searchType == Barcode.CodeType.LINEAR) ? countBorderZonePixel(y, x,

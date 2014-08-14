@@ -76,8 +76,10 @@ public class LinearBarcode extends Barcode{
                 CandidateBarcode cb = new CandidateBarcode(img_details, minRect, searchParams);
                 double barcode_orientation = getBarcodeOrientation(contours, i);                
                 // get candidate regions to be a barcode
-                if(DEBUG_IMAGES)
+                if(DEBUG_IMAGES){
                      cb.debug_drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
+                     write_Mat("magnitudes.csv", img_details.gradient_magnitude);
+                }
                 minRect = cb.getCandidateRegion();
                if(DEBUG_IMAGES)
                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_scaled);                                
@@ -147,8 +149,6 @@ public class LinearBarcode extends Barcode{
         Core.magnitude(scharr_x, scharr_y, img_details.gradient_magnitude);
         Core.normalize(img_details.gradient_magnitude, img_details.gradient_magnitude, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
         Imgproc.threshold(img_details.gradient_magnitude, img_details.gradient_magnitude, 50, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-        if(DEBUG_IMAGES)
-            write_Mat("magnitudes.csv", img_details.gradient_magnitude);
        
         // calculate variances, normalize and threshold so that low-variance areas are bright(255) and 
         // high-variance areas are dark(0)
