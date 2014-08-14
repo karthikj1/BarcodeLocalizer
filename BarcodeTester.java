@@ -15,10 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 import com.google.zxing.*;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.common.HybridBinarizer;
+import com.google.zxing.multi.GenericMultipleBarcodeReader;
+import com.google.zxing.multi.MultipleBarcodeReader;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -51,7 +52,7 @@ public class BarcodeTester {
         boolean test_2D = false;
         Barcode b;
 
-        if (true)
+        if (false)
             for (File f : listOfFiles) {
                 s = f.getName();
                 if (test_2D) {
@@ -61,7 +62,7 @@ public class BarcodeTester {
                     images.add(imgDir + fileSeparator + s);
             }
 
-        images.add(imgDir + fileSeparator + "barcode2.jpg");
+        images.add(imgDir + fileSeparator + "QRcode9.jpg");
         if (images.size() > 1)
             show_intermediate_steps = false;
 
@@ -70,29 +71,25 @@ public class BarcodeTester {
                 b = new LinearBarcode(imgFile, show_intermediate_steps);
             else
                 b = new MatrixBarcode(imgFile, show_intermediate_steps);
-             
-             b.setMultipleFlags(Barcode.TryHarderFlags.ALL);
-             try{
+
+            b.setMultipleFlags(Barcode.TryHarderFlags.SMALL, Barcode.TryHarderFlags.RESIZE_BEFORE_DECODE);
+            try {
                 candidateCodes = b.findBarcode();
-             }
-             catch(IOException ioe){
-                 System.out.println("IO Exception when finding barcode " + ioe.getMessage());
-             }
-            if (candidateCodes.size() == 0){
-                System.out.println("Could not find candidate barcode in " + imgFile);
-            }
-            else
-                decodeBarcode(candidateCodes, imgFile, "Localizer");
-            if(false){
-            // do comparison test with just ZXing on the source image
-            System.out.print("Now testing " + imgFile + " with just ZXing - ");
-            try {                
-                List<BufferedImage> rawImage = new ArrayList<BufferedImage>();
-                rawImage.add(ImageIO.read(new File(imgFile)));
-                decodeBarcode(rawImage, imgFile, "ZXing");
             } catch (IOException ioe) {
-                System.out.println("ZXing error reading " + imgFile + " " + ioe.getMessage());
+                System.out.println("IO Exception when finding barcode " + ioe.getMessage());
             }
+
+            decodeBarcode(candidateCodes, imgFile, "Localizer");
+            if (false) {
+                // do comparison test with just ZXing on the source image
+                System.out.print("Now testing " + imgFile + " with just ZXing - ");
+                try {
+                    List<BufferedImage> rawImage = new ArrayList<BufferedImage>();
+                    rawImage.add(ImageIO.read(new File(imgFile)));
+                    decodeBarcode(rawImage, imgFile, "ZXing");
+                } catch (IOException ioe) {
+                    System.out.println("ZXing error reading " + imgFile + " " + ioe.getMessage());
+                }
             }
         }
     }
@@ -103,20 +100,21 @@ public class BarcodeTester {
         String title = null;
 
         for (BufferedImage candidate : candidateCodes) {
-            
-            try{
-            ImageIO.write(candidate, "JPG", new File("Candidate.jpg"));
-            }
-            catch(IOException ioe){
+
+            try {
+                ImageIO.write(candidate, "JPG", new File("Candidate.jpg"));
+            } catch (IOException ioe) {
                 System.out.println(ioe.getMessage());
             }
-            
+
             LuminanceSource source = new BufferedImageLuminanceSource(candidate);
             BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
             Reader reader = new MultiFormatReader();
 
-            Map<DecodeHintType, Boolean> hints = new HashMap<>();
-            hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);            
+            Map<DecodeHintType, Object> hints = new EnumMap<>(DecodeHintType.class);
+            hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
+            // hints.put(DecodeHintType.PURE_BARCODE, Boolean.TRUE);
+            // hints.put(DecodeHintType.POSSIBLE_FORMATS, EnumSet.allOf(BarcodeFormat.class));
             try {
                 Result result = reader.decode(bitmap, hints);
                 decodedBarcode = candidate;
@@ -128,6 +126,15 @@ public class BarcodeTester {
                 System.out.println("ZXing - Barcode failed checksum: " + cse.getMessage());
             } catch (FormatException fe) {
                 System.out.println("ZXing - Barcode format was invalid: " + fe.getMessage());
+            }
+            try {
+        // Look for multiple barcodes
+                MultipleBarcodeReader multiReader = new GenericMultipleBarcodeReader(reader);
+                Result[] theResults = multiReader.decodeMultiple(bitmap, hints);
+                if (theResults != null)
+                    System.out.println("got a result");
+            } catch (ReaderException re) {
+                System.out.println("Exception - " + re.getClass());
             }
         }
 
