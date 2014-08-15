@@ -28,11 +28,13 @@ import org.opencv.imgproc.Imgproc;
  * @author karthik
  */
 public class LinearBarcode extends Barcode{
-
-    // threshold below which normalized variance is considered low enough for angles in that area to be mostly unidirectional
-    private static final double THRESHOLD_VARIANCE = 75;  
     private Mat integral_gradient_directions;
+    private int DUMMY_VARIANCE = -1; // used in variance grid at points with no gradient
+    private int DUMMY_VARIANCE_2 = -5; // used in variance grid at points with insufficient gradient density
     
+    // below two are used as markers in the modified variance grid for CandidateBarcode to expand the capture area
+    static int NO_GRADIENT = 127;
+    static int HIGH_VARIANCE_GRADIENT = 63;
 
     public LinearBarcode(String filename) {
         super(filename);
@@ -84,8 +86,9 @@ public class LinearBarcode extends Barcode{
                if(DEBUG_IMAGES)
                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_scaled);                                
                 ROI = cb.NormalizeCandidateRegion(barcode_orientation);               
-                               
-                ROI = scale_candidateBarcode(ROI);               
+                   
+                if((statusFlags & TryHarderFlags.POSTPROCESS_RESIZE_BARCODE.value()) != 0)
+                    ROI = scale_candidateBarcode(ROI);               
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
              }
         }
@@ -152,14 +155,33 @@ public class LinearBarcode extends Barcode{
        
         // calculate variances, normalize and threshold so that low-variance areas are bright(255) and 
         // high-variance areas are dark(0)
-        variance = calc_variance();
+        Mat raw_variance = calc_variance();
+
+        // replaces every instance of -1 with the max variance
+        // this prevents a situation where areas with no edges show up as low variance bec their angles are 0
+        // if the value in these cells are set to double.maxval, all the real variances get normalized to 0        
+        variance = raw_variance.clone();
+        double maxVal = Core.minMaxLoc(raw_variance).maxVal;
+        Mat mask = Mat.zeros(raw_variance.size(), CvType.CV_8U);
+        Core.inRange(raw_variance, new Scalar(DUMMY_VARIANCE_2), new Scalar(DUMMY_VARIANCE), mask);
+        variance.setTo(new Scalar(maxVal), mask);
+ 
         Core.normalize(variance, variance, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
-        Imgproc.threshold(variance, variance, THRESHOLD_VARIANCE, 255, Imgproc.THRESH_BINARY_INV);
-            
+        Imgproc.threshold(variance, variance, SearchParameters.THRESHOLD_VARIANCE, 255, Imgproc.THRESH_BINARY_INV);
+        
+        img_details.adjusted_variance = variance.clone();
+        Core.inRange(raw_variance, new Scalar(DUMMY_VARIANCE), new Scalar(DUMMY_VARIANCE), mask);
+        img_details.adjusted_variance.setTo(new Scalar(NO_GRADIENT), mask);
+        
+        Core.inRange(raw_variance, new Scalar(DUMMY_VARIANCE_2), new Scalar(DUMMY_VARIANCE_2), mask);
+        img_details.adjusted_variance.setTo(new Scalar(HIGH_VARIANCE_GRADIENT), mask);
+
         if(DEBUG_IMAGES){
            ImageDisplay.showImageFrame(img_details.gradient_magnitude, "Magnitudes");
+           ImageDisplay.showImageFrame(img_details.adjusted_variance, "Adjusted variance");
            ImageDisplay.showImageFrame(variance, "Variance");
            write_Mat("variance.csv", variance);       
+           write_Mat("Adjusted_variance.csv", img_details.adjusted_variance);
         }
         
         img_details.E3 = variance;
@@ -171,8 +193,7 @@ public class LinearBarcode extends Barcode{
          */
         int right_col, left_col, top_row, bottom_row;
         double sum, sumsq, data;
-
-        int DUMMY_VARIANCE = -1;
+        
         integral_gradient_directions = new Mat(rows, cols, CvType.CV_32F);
         Mat integral_sumsq = new Mat(rows, cols, CvType.CV_32F);
         Mat variance = new Mat(rows, cols, CvType.CV_32F);
@@ -211,7 +232,7 @@ public class LinearBarcode extends Barcode{
                 // TODO: do this more efficiently
                 rect_area = Core.countNonZero(img_details.gradient_magnitude.submat(Math.max(top_row, 0), bottom_row, Math.max(left_col, 0), right_col));                
                 if(rect_area <  searchParams.THRESHOLD_MIN_GRADIENT_EDGES) { 
-                    variance.put(i, j, DUMMY_VARIANCE);
+                    variance.put(i, j, DUMMY_VARIANCE_2);
                     continue;
                 }
 
@@ -228,14 +249,8 @@ public class LinearBarcode extends Barcode{
         }  // for i    
         
         integral_gradient_directions = integral_sumsq = null;
-        // TODO: find a more efficient way to do this
-        // replaces every instance of -1 with the max variance
-        // this prevents a situation where areas with no edges show up as low variance bec their angles are 0
-        // if the value in these cells are set to double.maxval, all the real variances get normalized to 0
-        double maxVal = Core.minMaxLoc(variance).maxVal;
-        Mat mask = Mat.zeros(variance.size(), CvType.CV_8U);
-        Core.inRange(variance, new Scalar(DUMMY_VARIANCE), new Scalar(DUMMY_VARIANCE), mask);
-        variance.setTo(new Scalar(maxVal), mask);
+        if(DEBUG_IMAGES)
+            write_Mat("raw_variances.csv", variance);
           
         return variance;
     }

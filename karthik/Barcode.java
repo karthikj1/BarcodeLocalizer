@@ -34,7 +34,7 @@ import org.opencv.imgproc.Imgproc;
 public abstract class Barcode {
 
     public static enum TryHarderFlags {
-            NORMAL(1), SMALL(2), LARGE(4), ALL_SIZES(7), ALL(255);
+            NORMAL(1), SMALL(2), LARGE(4), ALL_SIZES(7), POSTPROCESS_RESIZE_BARCODE(8), ALL(255);
         
         private int val;
         

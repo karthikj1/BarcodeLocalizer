@@ -54,9 +54,10 @@ public class MatrixBarcode extends Barcode {
 
         connectComponents();
         
-        if (DEBUG_IMAGES)
+        if (DEBUG_IMAGES){
+            write_Mat("E3.csv", img_details.E3);
             ImageDisplay.showImageFrame(img_details.E3, "Image img_details.E3 after morph close and open");
-
+        }
         List<MatOfPoint> contours = new ArrayList<>();
         // findContours modifies source image so we pass it a copy of img_details.E3
         // img_details.E3 will be used again shortly to expand the barcode region
@@ -80,10 +81,13 @@ public class MatrixBarcode extends Barcode {
                 if(DEBUG_IMAGES)
                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
                 // get candidate regions to be a barcode
-                minRect = cb.getCandidateRegion();
+               // minRect = cb.getCandidateRegion();
+                minRect.size.width += 2 + 2*searchParams.MATRIX_NUM_BLANKS_THRESHOLD;
+                minRect.size.height += 2 + 2*searchParams.MATRIX_NUM_BLANKS_THRESHOLD;
                 ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);  
                 
-                ROI = scale_candidateBarcode(ROI);               
+                if((statusFlags & TryHarderFlags.POSTPROCESS_RESIZE_BARCODE.value()) != 0)
+                    ROI = scale_candidateBarcode(ROI);               
                 
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
                 if (DEBUG_IMAGES) {

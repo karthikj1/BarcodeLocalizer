@@ -62,8 +62,7 @@ public class ImageDisplay extends JPanel {
             image = getBufImg(openCV_img);
         } catch (IOException e) {
             //Let us know what happened  
-            System.out.println("Error converting openCV image: " + e.
-                getMessage());
+            System.out.println("Error converting openCV image: " + e.getMessage());
         }
     }
 

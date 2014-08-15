@@ -24,6 +24,10 @@ import org.opencv.core.Size;
  * by the factory methods for small and large barcode searches
  */
 class SearchParameters {
+    
+    // below threshold is used only for 1D barcodes
+    // threshold below which normalized variance is considered low enough for angles in that area to be mostly unidirectional
+    static final double THRESHOLD_VARIANCE = 75;
 
     Size elem_size, large_elem_size;
     final int MAX_ROWS = 300;  //image with more rows than MAX_ROWS is scaled down to make finding barcode easier
