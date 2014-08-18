@@ -29,12 +29,12 @@ import org.opencv.imgproc.Imgproc;
  */
 public class LinearBarcode extends Barcode{
     private Mat integral_gradient_directions;
-    private int DUMMY_VARIANCE = -1; // used in variance grid at points with no gradient
-    private int DUMMY_VARIANCE_2 = -5; // used in variance grid at points with insufficient gradient density
+    private int DUMMY_VARIANCE = -1; // used as marker number in variance grid at points with no gradient
+    private int DUMMY_VARIANCE_2 = -5; // used as marker number in variance grid at points with insufficient gradient density
     
     // below two are used as markers in the modified variance grid for CandidateBarcode to expand the capture area
-    static int NO_GRADIENT = 127;
-    static int HIGH_VARIANCE_GRADIENT = 63;
+    static int NO_GRADIENT = 127; // corresponds to DUMMY_VARIANCE
+    static int HIGH_VARIANCE_GRADIENT = 63; // corresponds to DUMMY_VARIANCE_2
 
     public LinearBarcode(String filename) {
         super(filename);
@@ -54,13 +54,13 @@ public class LinearBarcode extends Barcode{
         connectComponents();
         
        if(DEBUG_IMAGES){
-            write_Mat("E3.csv", img_details.E3);
-            ImageDisplay.showImageFrame(img_details.E3, "Image E3 after morph close and open");
+            write_Mat("E3.csv", img_details.src_processed);
+            ImageDisplay.showImageFrame(img_details.src_processed, "Image E3 after morph close and open");
        }
         List<MatOfPoint> contours = new ArrayList<>();
-                // findContours modifies source image so we pass it a copy of img_details.E3
-        // img_details.E3 will be used again shortly to expand the barcode region
-        Imgproc.findContours(img_details.E3.clone(), contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+        // findContours modifies source image so we pass it a copy of img_details.src_processed
+        // img_details.src_processed will be used again shortly to expand the barcode region
+        Imgproc.findContours(img_details.src_processed.clone(), contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
         
         double bounding_rect_area = 0;
         RotatedRect minRect;
@@ -184,7 +184,7 @@ public class LinearBarcode extends Barcode{
            write_Mat("Adjusted_variance.csv", img_details.adjusted_variance);
         }
         
-        img_details.E3 = variance;
+        img_details.src_processed = variance;
     }
 
     private Mat calc_variance() {

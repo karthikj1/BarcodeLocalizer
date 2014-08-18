@@ -27,7 +27,7 @@ class ImageInfo {
 
     // container class for source image and various intermediate images created
     // while processing src_original to search for a barcode
-    Mat src_original, src_scaled, src_grayscale, E3;
+    Mat src_original, src_scaled, src_grayscale, src_processed;
     Mat gradient_direction, gradient_magnitude;
     Mat adjusted_variance;
     

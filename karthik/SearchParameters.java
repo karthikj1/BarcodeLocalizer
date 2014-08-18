@@ -35,6 +35,7 @@ class SearchParameters {
     // threshold for ratio of contour area to bounding rectangle area - used to see if contour shape is roughly rectangular
     final double THRESHOLD_AREA_RATIO = 0.6;  
 
+    // multipliers to calculate threshold values below as a function of image size
     double THRESHOLD_MIN_AREA_MULTIPLIER;
     double THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER;
     double RECT_HEIGHT_MULTIPLIER;
@@ -88,6 +89,25 @@ class SearchParameters {
         return params;
     }
 
+    static SearchParameters getVSmallParameters() {
+        // returns parameters used when searching for barcodes that are small relative to image size
+        // used as one of the TRY_HARDER options
+        SearchParameters params = new SearchParameters();
+
+        params.THRESHOLD_MIN_AREA_MULTIPLIER = 0.02;
+        params.THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER = 0.3;
+
+        params.NUM_BLANKS_THRESHOLD = 5;
+        params.MATRIX_NUM_BLANKS_THRESHOLD = 3;
+
+        params.RECT_HEIGHT_MULTIPLIER = 0.02;
+        params.RECT_WIDTH_MULTIPLIER = 0.02;
+
+        params.elem_size = new Size(5, 5);
+        params.large_elem_size = new Size(6, 6);
+        return params;
+    }
+    
     static SearchParameters getLargeParameters() {
         // returns parameters used when searching for barcodes that are large relative to image size
         // has some success with localizing blurry barcodes also though they probably will not decode correctly

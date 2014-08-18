@@ -33,8 +33,12 @@ import org.opencv.imgproc.Imgproc;
  */
 public abstract class Barcode {
 
+    public String getName() {
+        return name;
+    }
+
     public static enum TryHarderFlags {
-            NORMAL(1), SMALL(2), LARGE(4), ALL_SIZES(7), POSTPROCESS_RESIZE_BARCODE(8), ALL(255);
+            NORMAL(1), SMALL(2), LARGE(4), VERY_SMALL(8), ALL_SIZES(15), POSTPROCESS_RESIZE_BARCODE(16), ALL(255);
         
         private int val;
         
@@ -68,7 +72,7 @@ public abstract class Barcode {
 
     Barcode(String filename) {
         name = filename;
-        img_details = new ImageInfo(loadImage(filename));
+        img_details = new ImageInfo(loadImage());
         
         rows = img_details.src_original.rows();
         cols = img_details.src_original.cols();
@@ -125,6 +129,11 @@ public abstract class Barcode {
             locateBarcode();
         }
 
+        if ((statusFlags & TryHarderFlags.VERY_SMALL.value()) != 0) {
+            searchParams = SearchParameters.getVSmallParameters();
+            locateBarcode();
+        }
+        
         return candidateBarcodes;
     }
 
@@ -135,18 +144,14 @@ public abstract class Barcode {
         
         scaleImage();
         searchParams.setImageSpecificParameters(rows, cols);
-        
         // do pre-processing to increase contrast
+        img_details.src_scaled.convertTo(img_details.src_scaled, CvType.CV_32FC3);
         img_details.src_grayscale = new Mat(rows, cols, CvType.CV_32F);
+            
         Imgproc.cvtColor(img_details.src_scaled, img_details.src_grayscale, Imgproc.COLOR_RGB2GRAY);
         Imgproc.morphologyEx(img_details.src_grayscale, img_details.src_grayscale, Imgproc.MORPH_BLACKHAT,
             Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.elem_size));
- 
-        if (DEBUG_IMAGES) {
-            write_Mat("greyscale.csv", img_details.src_grayscale);
-            ImageDisplay.showImageFrame(img_details.src_grayscale, "Pre-processed image");
-        }
-    }
+     }
         
     protected Mat scale_candidateBarcode(Mat candidate){
         // resizes candidate image to have at least MIN_COLS columns and MIN_ROWS rows
@@ -185,11 +190,11 @@ public abstract class Barcode {
         small_elemSE =  Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.elem_size);
         large_elemSE = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.large_elem_size);
             
-        Imgproc.dilate(img_details.E3, img_details.E3, small_elemSE);
-        Imgproc.erode(img_details.E3, img_details.E3, large_elemSE);
+        Imgproc.dilate(img_details.src_processed, img_details.src_processed, small_elemSE);
+        Imgproc.erode(img_details.src_processed, img_details.src_processed, large_elemSE);
         
-        Imgproc.erode(img_details.E3, img_details.E3, small_elemSE);
-        Imgproc.dilate(img_details.E3, img_details.E3, large_elemSE);
+        Imgproc.erode(img_details.src_processed, img_details.src_processed, small_elemSE);
+        Imgproc.dilate(img_details.src_processed, img_details.src_processed, large_elemSE);
     }
     
         protected void scaleImage() {
@@ -220,14 +225,6 @@ public abstract class Barcode {
 
     }
 
-    protected Mat abs(Mat input) {
-        // calc abs value of a matrix by calc'ing absdiff with a zero matrix
-        Mat output = Mat.zeros(input.size(), input.type());
-
-        Core.absdiff(input, output, output);
-        return output;
-    }
-
     protected static void write_Mat(String filename, Mat img) {
         try {
             PrintStream original = new PrintStream(System.out);
@@ -242,9 +239,9 @@ public abstract class Barcode {
 
     }
 
-    protected Mat loadImage(String filename) {
+    protected Mat loadImage() {
 
-        return Highgui.imread(filename, Highgui.CV_LOAD_IMAGE_COLOR);
+        return Highgui.imread(name, Highgui.CV_LOAD_IMAGE_COLOR);
     }
 
 }

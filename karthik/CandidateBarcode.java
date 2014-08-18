@@ -107,7 +107,6 @@ class CandidateBarcode {
         y = minRect.center.y - (long_axis / 2.0) * y_increment - adjust_y;
         x = minRect.center.x - (long_axis / 2.0) * x_increment - adjust_x;
         num_blanks = 0;
-        //TODO: remove this
         while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
             num_blanks = countQuietZonePixel(y, x);
             x -= x_increment;
@@ -133,7 +132,7 @@ class CandidateBarcode {
 
         y = adjust_y + minRect.center.y + (short_axis / 2.0) * y_increment;
         x = adjust_x + minRect.center.x + (short_axis / 2.0) * x_increment;
-        double target_magnitude = img_details.E3.get((int) y, (int) x)[0];
+        double target_magnitude = img_details.src_processed.get((int) y, (int) x)[0];
 
         // start at "top" of candidate region i.e. moving parallel to barcode lines
         while (isValidCoordinate(x, y) && (num_blanks < threshold)) {
@@ -187,7 +186,7 @@ class CandidateBarcode {
         y = minRect.center.y;
         x = minRect.center.x;
         // start at edge of captured area
-        while(isValidCoordinate(x, y) && img_details.E3.get((int) y, (int) x)[0] == 255){
+        while(isValidCoordinate(x, y) && img_details.src_processed.get((int) y, (int) x)[0] == 255){
             x += x_increment;
             y += y_increment;            
         }
@@ -201,13 +200,13 @@ class CandidateBarcode {
         }
         start_x = x;
         start_y = y;
-        Core.circle(img_details.src_scaled, new Point(start_x, start_y), 3, new Scalar(255, 0, 0));
+        Core.circle(img_details.src_scaled, new Point(start_x, start_y), 5, new Scalar(255, 0, 0));
         // now expand along "bottom"
         y = minRect.center.y;
         x = minRect.center.x;
         num_blanks = 0;
         // start at other edge of captured area
-        while(isValidCoordinate(x, y) && img_details.E3.get((int) y, (int) x)[0] == 255){
+        while(isValidCoordinate(x, y) && img_details.src_processed.get((int) y, (int) x)[0] == 255){
             x -= x_increment;
             y -= y_increment;            
         }
@@ -221,7 +220,7 @@ class CandidateBarcode {
         expanded.center.x = (start_x + x) / 2.0;
         expanded.center.y = (start_y + y) / 2.0;
 
-        Core.circle(img_details.src_scaled, new Point(x, y), 3, new Scalar(255, 0, 0));
+        Core.circle(img_details.src_scaled, new Point(x, y), 5, new Scalar(255, 0, 0));
         expanded.size.height = length(x, y, start_x, start_y);
         System.out.println("expanded height = " + expanded.size.height);
         /*
@@ -235,7 +234,7 @@ class CandidateBarcode {
         y = minRect.center.y;
         x = minRect.center.x;
         // start at one edge of candidate region
-        while(isValidCoordinate(x, y) && img_details.E3.get((int) y, (int) x)[0] == 255){
+        while(isValidCoordinate(x, y) && img_details.src_processed.get((int) y, (int) x)[0] == 255){
             x += x_increment;
             y += y_increment;            
         }
@@ -246,14 +245,14 @@ class CandidateBarcode {
         }
         start_x = x;
         start_y = y;
-        Core.circle(img_details.src_scaled, new Point(x, y), 3, new Scalar(255, 0, 0));
+        Core.circle(img_details.src_scaled, new Point(x, y), 5, new Scalar(255, 0, 0));
         // now expand along other edge
         y = minRect.center.y;
         x = minRect.center.x;
         num_blanks = 0;
         
         
-        while(isValidCoordinate(x, y) && img_details.E3.get((int) y, (int) x)[0] == 255){
+        while(isValidCoordinate(x, y) && img_details.src_processed.get((int) y, (int) x)[0] == 255){
             x -= x_increment;
             y -= y_increment;            
         }
@@ -264,7 +263,7 @@ class CandidateBarcode {
         }
         expanded.center.x = (start_x + x) / 2.0;
         expanded.center.y = (start_y + y) / 2.0;
-        Core.circle(img_details.src_scaled, new Point(x, y), 3, new Scalar(255, 0, 0));
+        Core.circle(img_details.src_scaled, new Point(x, y), 5, new Scalar(255, 0, 0));
 
         expanded.size.width = length(x, y, start_x, start_y);
         System.out.println("expanded width = " + expanded.size.width);
@@ -411,13 +410,13 @@ class CandidateBarcode {
         if (val == 0)
              // reset counter if we hit a gradient 
             // - handles situations when the original captured region only captured part of the barcode
-            num_blanks = 0;
+            return 0;
         
         if(val == LinearBarcode.NO_GRADIENT) // we hit a point with no gradient in the original image
-            num_blanks++;
+            return ++num_blanks;
         
         if(val == LinearBarcode.HIGH_VARIANCE_GRADIENT) // we hit a point with a gradient but high variance of angles around it
-            num_blanks = threshold;
+            return threshold;
         
         return num_blanks;
     }
@@ -453,7 +452,7 @@ class CandidateBarcode {
         if ((x < 0) || (y < 0))
             return false;
 
-        if ((x >= img_details.E3.cols()) || (y >= img_details.E3.rows()))
+        if ((x >= img_details.src_processed.cols()) || (y >= img_details.src_processed.rows()))
             return false;
 
         return true;

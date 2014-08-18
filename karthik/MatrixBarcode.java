@@ -50,18 +50,18 @@ public class MatrixBarcode extends Barcode {
 
         preprocess_image();
 
-        img_details.E3 = findCandidates();   // find areas with low variance in gradient direction
+        img_details.src_processed = findCandidates();   // find areas with low variance in gradient direction
 
         connectComponents();
         
         if (DEBUG_IMAGES){
-            write_Mat("E3.csv", img_details.E3);
-            ImageDisplay.showImageFrame(img_details.E3, "Image img_details.E3 after morph close and open");
+            write_Mat("E3.csv", img_details.src_processed);
+            ImageDisplay.showImageFrame(img_details.src_processed, "Image img_details.E3 after morph close and open");
         }
         List<MatOfPoint> contours = new ArrayList<>();
-        // findContours modifies source image so we pass it a copy of img_details.E3
-        // img_details.E3 will be used again shortly to expand the barcode region
-        Imgproc.findContours(img_details.E3.clone(),
+        // findContours modifies source image so src_processed pass it a cosrc_processed of img_details.E3
+        // img_details.E3 will be used again shortly to expand the bsrc_processedcode region
+        Imgproc.findContours(img_details.src_processed.clone(),
             contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
         
         double bounding_rect_area = 0;
@@ -172,7 +172,8 @@ public class MatrixBarcode extends Barcode {
         Mat mask = Mat.zeros(img_details.gradient_direction.size(), CvType.CV_8U);
         Core.inRange(img_details.gradient_magnitude, new Scalar(0), new Scalar(0), mask);
         img_details.gradient_direction.setTo(new Scalar(DUMMY_ANGLE), mask);
-        write_Mat("angles_modified.csv", img_details.gradient_direction);
+        if(DEBUG_IMAGES)
+            write_Mat("angles_modified.csv", img_details.gradient_direction);
 
         int width_offset = searchParams.RECT_WIDTH / 2;
         int height_offset = searchParams.RECT_HEIGHT / 2;
