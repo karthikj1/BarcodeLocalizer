@@ -157,7 +157,7 @@ public class MatrixBarcode extends Barcode {
         int right_col, left_col, top_row, bottom_row;
         int DUMMY_ANGLE = 255;
         int BIN_WIDTH = 15;
-        int HIST_INC = 1;
+        int HIST_INC = 3;
     
         MatOfInt hist = new MatOfInt();
         Mat imgWindow; // used to hold sub-matrices from the image that represent the window around the current point

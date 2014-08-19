@@ -143,7 +143,7 @@ public abstract class Barcode {
     protected Mat scale_candidateBarcode(Mat candidate){
         // resizes candidate image to have at least MIN_COLS columns and MIN_ROWS rows
         // called when RESIZE_BEFORE_DECODE is set - seems to help ZXing decode barcode
-        // TODO: combine this into one function with scaleImage
+        
         int MIN_COLS = 200;
         int MIN_ROWS = 200;
         
