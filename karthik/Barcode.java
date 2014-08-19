@@ -38,7 +38,7 @@ public abstract class Barcode {
     }
 
     public static enum TryHarderFlags {
-            NORMAL(1), SMALL(2), LARGE(4), VERY_SMALL(8), ALL_SIZES(15), POSTPROCESS_RESIZE_BARCODE(16), ALL(255);
+            NORMAL(1), SMALL(2), LARGE(4), VERY_SMALL(8), ALL_SIZES(15), ALL_SIZES_BUT_VSMALL(7), POSTPROCESS_RESIZE_BARCODE(16), ALL(255);
         
         private int val;
         
@@ -56,7 +56,7 @@ public abstract class Barcode {
 
     protected String name;
     
-    boolean DEBUG_IMAGES;
+    boolean DEBUG_IMAGES;   // flag if we want to show intermediate steps for debugging
 
     SearchParameters searchParams;
     protected ImageInfo img_details;

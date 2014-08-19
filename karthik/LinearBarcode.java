@@ -111,7 +111,11 @@ public class LinearBarcode extends Barcode{
         // mask now contains angles only for pixels within region enclosed by contour
 
         double barcode_orientation = Core.sumElems(temp_directions).val[0];
-        barcode_orientation = barcode_orientation/Core.countNonZero(temp_magnitudes);
+        int num_NonZero = Core.countNonZero(temp_magnitudes);
+        if(num_NonZero == 0)
+            barcode_orientation = USE_ROTATED_RECT_ANGLE;
+        else
+            barcode_orientation = barcode_orientation/num_NonZero;
         
         return barcode_orientation;
     }
@@ -208,7 +212,6 @@ public class LinearBarcode extends Barcode{
             write_Mat("angles_modified.csv", img_details.gradient_direction);        
         
         Imgproc.integral2(img_details.gradient_direction, integral_gradient_directions, integral_sumsq, CvType.CV_32F);
-        //TODO: look into doing tnis for alternate pixels similar to 2D barcode
         for (int i = 0; i < rows; i++) {
             // first calculate the row locations of the rectangle and set them to -1 
             // if they are outside the matrix bounds
