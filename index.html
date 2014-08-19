@@ -33,7 +33,9 @@
 
 <p>This library localizes 1-D and 2-D barcodes from arbitrary images and is able to successfully handle noisy backgrounds as well as barcodes that are skewed or rotated out of plane. The resulting cropped and localized images can then be decoded by other software barcode decoders that require an input image as close as possible to a pure barcode. </p>
 
-<p>Most barcode decoders cannot easily handle noisy images or images where the barcode is rotated, so using this package as a localizer prior to decoding significantly improves decode success rates.</p>
+<p>Most barcode decoders cannot easily handle noisy images or images where the barcode is rotated, so using this package as a localizer prior to decoding significantly improves decode success rates. Compared to ZXing, a popular open-source decoding library, using this library in combination with ZXing almost doubled ZXing's success rate at decoding both 1-D and 2-D codes in single images.</p>
+
+
 
 <h5> General Observations </h5>
 <p> The goal for this project is slightly different from the goal of most software decoders used in mobile phone apps etc. Firstly, this project only aims to handle the localization step, not the decoding. Secondly, most software decoders assume that the barcode will be roughly centered and horizontal and explicitly trade accuracy for speed with the idea that their target user is on a mobile phone and the camera is feeding a continuous stream of images.</p>
