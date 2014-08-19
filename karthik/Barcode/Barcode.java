@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package karthik;
+package karthik.Barcode;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -37,19 +37,6 @@ public abstract class Barcode {
         return name;
     }
 
-    public static enum TryHarderFlags {
-            NORMAL(1), SMALL(2), LARGE(4), VERY_SMALL(8), ALL_SIZES(15), ALL_SIZES_BUT_VSMALL(7), POSTPROCESS_RESIZE_BARCODE(16), ALL(255);
-        
-        private int val;
-        
-        TryHarderFlags(int val) {
-            this.val = val;
-        }                
-        
-        int value(){
-            return val;
-        }
-    };
     // flag to indicate what kind of searches to perform on image to locate barcode
     protected int statusFlags = TryHarderFlags.NORMAL.value();
     protected static double USE_ROTATED_RECT_ANGLE = 361;

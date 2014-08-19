@@ -1,4 +1,4 @@
-package karthik;
+package karthik.Barcode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
