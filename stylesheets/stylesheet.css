@@ -219,16 +219,18 @@ em {
 }
 
 table {
+  border-collapse:collapse;
   width: 100%;
-  border: 1px solid #ebebeb;
+  border: 1px solid black;
 }
 
 th {
   font-weight: 500;
+  border: 1px solid black;
 }
 
 td {
-  border: 1px solid #ebebeb;
+  border: 1px solid black;
   text-align: center; 
   font-weight: 300;
 }
@@ -254,26 +256,30 @@ h2 {
 } 
 
 h3 {
-  color: #d5000d;
+  color: #303030;
   font-size: 18px;
   font-weight: bold;
   margin-bottom: 8px;
+  text-decoration: underline;
 } 
  
 h4 {
   font-size: 16px;
   color: #303030;
   font-weight: bold;
+  text-decoration: underline;
 } 
 
 h5 {
   font-size: 1em;
   color: #303030;
+  text-decoration: underline;
 } 
 
 h6 {
   font-size: .8em;
   color: #303030;
+  text-decoration: underline;
 } 
 
 p {

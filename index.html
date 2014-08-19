@@ -1,56 +1,84 @@
-<!DOCTYPE html>
-<html>
-
-  <head>
+<head>
     <meta charset='utf-8'>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <meta name="description" content="BarcodeLocalizer : OpenCV and Java based barcode localizer">
-
-    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
-
-    <title>BarcodeLocalizer</title>
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+    <!--[if lt IE 9]>
+<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+<![endif]-->
+    <title>BarcodeLocalizer by Karthik Jayaraman</title>
   </head>
-
+  
   <body>
-
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <a id="forkme_banner" href="https://github.com/karthikj1/BarcodeLocalizer">View on GitHub</a>
-
-          <h1 id="project_title">BarcodeLocalizer</h1>
-          <h2 id="project_tagline">OpenCV and Java based barcode localizer</h2>
-
-            <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/karthikj1/BarcodeLocalizer/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/karthikj1/BarcodeLocalizer/tarball/master">Download this project as a tar.gz file</a>
-            </section>
+   <div id="container">
+      <div class="inner">
+      
+       <header>
+            <h1 id="project_title">BarcodeLocalizer</h1>
+           <h2 id="project_tagline">OpenCV and Java based barcode localizer</h2>
+ 
         </header>
-    </div>
 
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
-        <h1>
-<a name="barcodelocalizer" class="anchor" href="#barcodelocalizer"><span class="octicon octicon-link"></span></a>BarcodeLocalizer</h1>
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/karthikj1/BarcodeLocalizer/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/karthikj1/BarcodeLocalizer/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/karthikj1/BarcodeLocalizer" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
 
-<p>OpenCV and Java based barcode localizer</p>
+        <hr>
 
-<p>This library localizes 1-D and 2-D barcodes from arbitrary images and is able to successfully handle noisy backgrounds as well as barcodes that are skewed or rotated out of plane. The resulting cropped and localized images can then be decoded by other barcode decoders such as ZXing. </p>
+  <section id="main_content">
 
-<p>Most barcode decoders, such as ZXing, cannot easily handle noisy images or images where the barcode is rotated, so using this package as a localizer prior to decoding significantly improves decode success rates.</p>
-      </section>
-    </div>
+<p>This library localizes 1-D and 2-D barcodes from arbitrary images and is able to successfully handle noisy backgrounds as well as barcodes that are skewed or rotated out of plane. The resulting cropped and localized images can then be decoded by other software barcode decoders that require an input image as close as possible to a pure barcode. </p>
 
-    <!-- FOOTER  -->
-    <div id="footer_wrap" class="outer">
-      <footer class="inner">
-        <p class="copyright">BarcodeLocalizer maintained by <a href="https://github.com/karthikj1">karthikj1</a></p>
-        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
-      </footer>
-    </div>
+<p>Most barcode decoders cannot easily handle noisy images or images where the barcode is rotated, so using this package as a localizer prior to decoding significantly improves decode success rates.</p>
 
-    
+<h5> General Observations </h5>
+<p> The goal for this project is slightly different from the goal of most software decoders used in mobile phone apps etc. Firstly, this project only aims to handle the localization step, not the decoding. Secondly, most software decoders assume that the barcode will be roughly centered and horizontal and explicitly trade accuracy for speed with the idea that their target user is on a mobile phone and the camera is feeding a continuous stream of images.</p>
 
-  </body>
-</html>
+<p>The concept there is that even if the decoder misses on one still image, the next image in the feed will have a little bit of jitter from the user's hand motion and may now present a readable image. The user is also encouraged to orient the image so that the barcode is roughly centered and horizontal.  My localizer aims to get closer to "one shot, one kill" so that if there is a barcode anywhere in the image, it can be located and passed to the decoder in presentable format for reading.</p>
+
+<h3>Example Images with the Localized Barcode</h3>
+<BR>
+<div><img src="images/SkewedBarcode2.jpg" style="width: 180px; float: left; margin-bottom: 15px; margin-right: 20px;">
+<img src="images/candidate1_SkewedBarcode2.jpg" style="width: 180px; float: left; margin-bottom: 15px; margin-right: 20px;">  
+</div>
+<p style = "clear:both">
+<div><img src="images/QRCode23.jpg" style="width: 180px; float: left; margin-bottom: 15px; margin-right: 20px;">
+<img src="images/decoded_QRCode23.jpg" style="width: 180px; float: left; margin-bottom: 15px; margin-right: 3px;">  
+</div>
+<p style = "clear:both">
+
+
+<h3> Test results </h3>
+<br>
+<p>The library was tested on a sample set of 60 images, 30 of which were linear barcodes(mostly UPC and EAN) and 30 of which were 2-D barcodes(QR, PDF417, DataMatrix and Aztec). The popular open-source barcode decoding library ZXing was used as a benchmark. Roughly a third of the images were used as a training set to develop the algorithm. The results below are broken down as follows
+<ul> 
+<li> Images that were successfully decoded</LI>
+<li> Images that were localized successfully(on manual visual inspection)*</li>
+<li> Images that could not be localized or decoded </li>
+</ul>
+</p>
+<table border = 1>
+<TR><TH> Type</TH><th>Decoded</th><TH>Localized</TH><TH>Failed</TH></TR>
+<TR><TH>Linear</TH><TD>16 (ZXing - 9)</TD><TD> 8 (ZXing - N/A)</TD><TD> 6 (ZXing - 21)</TD></TR>
+<TR><TH>Matrix</TH><TD>15 (ZXing - 8)</TD><TD> 7 (ZXing - N/A)</TD><TD> 8 (ZXing - 22)</TD></TR>
+</table>
+<p>
+<BR>
+* Some barcodes were localized accurately but could not be decoded by ZXing - usually because the source image was too blurry or had shadows/light gradients that prevented ZXing from successfully decoding the barcode. These could potentially be decoded by a more robust decoder. </p>
+
+
+<h3>User Guide</h3>
+<p>The BarcodeLocalizer is designed to be used as a library imported into your Java project. A sample tester program called BarcodeTester.java is included with the source code to demonstrate its use.</p>
+
+</section>
+        <footer>
+          BarcodeLocalizer is maintained by <a href="https://github.com/karthikj1">karthikj1</a><br>
+          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+</div>
+</div>
+</body>
