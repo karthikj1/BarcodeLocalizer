@@ -80,7 +80,7 @@ public class ImageDisplay extends JPanel {
     }
 
     public Dimension getPreferredSize() {
-        //We set our preferred size if we succeeded in loading image  
+        // set our preferred size if we succeeded in loading image  
         if (image == null)
             return new Dimension(100, 100);
         else
@@ -93,35 +93,30 @@ public class ImageDisplay extends JPanel {
     }
 
     public static void showImageFrame(String image_file) {
-
-        frame = new JFrame(image_file);
-        imagePanel = new JPanel();
-        imagePanel.add(new ImageDisplay(image_file));
-        frame.add(imagePanel);
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.pack();
-        frame.setVisible(true);
+    // convenience function that displays a frame with the image in the parameters
+        
+        displayFrame(new ImageDisplay(image_file), image_file);
     }
 
     public static void showImageFrame(Mat openCV_img, String title) {
-
-        frame = new JFrame(title);
-        imagePanel = new JPanel();
-        imagePanel.add(new ImageDisplay(openCV_img));
-        frame.add(imagePanel);
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.pack();
-        frame.setVisible(true);
+    // convenience function that displays a frame with the image in the parameters
+        displayFrame(new ImageDisplay(openCV_img), title);
     }
 
     public static void showImageFrame(BufferedImage img, String title) {
-
+   // convenience function that displays a frame with the image in the parameters
+        displayFrame(new ImageDisplay(img), title);
+    }
+    
+    private static void displayFrame(ImageDisplay img, String title){
+        // internal function that displays a frame with the image in the parameters
+   
         frame = new JFrame(title);
         imagePanel = new JPanel();
-        imagePanel.add(new ImageDisplay(img));
+        imagePanel.add(img);
         frame.add(imagePanel);
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.pack();
-        frame.setVisible(true);
+        frame.setVisible(true);        
     }
 }

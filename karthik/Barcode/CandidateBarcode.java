@@ -326,7 +326,6 @@ class CandidateBarcode {
         Point[] scaledCorners = new Point[4];
         minRect.points(scaledCorners);
 
-        //      System.out.println("CropRectangle: Calculated angle " + rotation_angle + " provided " + angle);
         if (angle == Barcode.USE_ROTATED_RECT_ANGLE)
             rotation_angle = estimate_barcode_orientation();
         else
@@ -334,7 +333,7 @@ class CandidateBarcode {
 
         Point centre = new Point(enlarged.rows() / 2.0, enlarged.cols() / 2.0);
         rotation_matrix = Imgproc.getRotationMatrix2D(centre, rotation_angle, 1.0);
-        //    System.out.println("CropRectangle: Rotation matrix is: \n" + rotation_matrix.dump());
+
         // perform the affine transformation
         rotation_matrix.convertTo(rotation_matrix, CvType.CV_32F); // convert type so matrix multip. works properly
         List<Point> newCornerPoints = new ArrayList<>();
@@ -349,7 +348,6 @@ class CandidateBarcode {
         }
         Mat rotated = Mat.zeros(enlarged.size(), enlarged.type());
         Imgproc.warpAffine(enlarged, rotated, rotation_matrix, enlarged.size(), Imgproc.INTER_CUBIC);
-        // draw circles at calculated location of corner points after rotation
 
         Point rectPoints[] = newCornerPoints.toArray(new Point[4]);
 

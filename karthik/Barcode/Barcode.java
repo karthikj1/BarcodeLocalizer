@@ -32,7 +32,7 @@ import org.opencv.imgproc.Imgproc;
  * @author karthik
  */
 public abstract class Barcode {
-
+// parent class containing common methods and definitions for 1D and 2D barcode searches
     public String getName() {
         return name;
     }
@@ -41,11 +41,11 @@ public abstract class Barcode {
     protected int statusFlags = TryHarderFlags.NORMAL.value();
     protected static double USE_ROTATED_RECT_ANGLE = 361;
 
-    protected String name;
+    protected String name; // filename of barcode image file
     
     boolean DEBUG_IMAGES;   // flag if we want to show intermediate steps for debugging
 
-    SearchParameters searchParams;
+    SearchParameters searchParams; //various parameters and thresholds used during the search 
     protected ImageInfo img_details;
     protected int rows, cols;
  
@@ -54,10 +54,11 @@ public abstract class Barcode {
     static enum CodeType {LINEAR, MATRIX};        
     
     static {
+        // loads OpenCV native library
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    Barcode(String filename) {
+    Barcode(String filename) throws IOException{
         name = filename;
         img_details = new ImageInfo(loadImage());
         
@@ -70,17 +71,19 @@ public abstract class Barcode {
       }
 
     public void setOneFlag(TryHarderFlags flag){
+        // sets the specified flag to TRUE, other flags are untouched
         statusFlags = statusFlags | flag.value();
     }
     
     public void clearFlag(TryHarderFlags flag){
+        // sets the specified flag to FALSE, other flags are untouched
         statusFlags = statusFlags & (~flag.value());
     }
     
     public void resetFlags(){
+        // resets status flag to default of searching with NORMAL only
         statusFlags = TryHarderFlags.NORMAL.value();
-    }
-    
+    }    
 
     public void setMultipleFlags(TryHarderFlags... flags){
         // clears the flags and sets it to only the ones specified in the argument list
@@ -186,7 +189,7 @@ public abstract class Barcode {
     
         protected void scaleImage() {
         // shrink image if it is above a certain size   
-        // it also reduces image size for large images which helps with processing speed
+        // it reduces image size for large images which helps with processing speed
         // and reducing sensitivity to barcode size within the image
         
         if(rows > searchParams.MAX_ROWS){
@@ -199,6 +202,11 @@ public abstract class Barcode {
     }
 
     protected double calc_rect_sum(Mat integral, int right_col, int left_col, int top_row, int bottom_row) {
+        // calculates sum of values within a rectangle from a given integral image
+        // if top_row or left_col are -1, it uses 0 for their value
+        // this is useful when one part of the rectangle lies outside the image bounds
+        // if the right col or bottom row falls outside the image bounds, pass the max col or max row to this method
+        // does NOT perform any bounds checking
         double top_left, top_right, bottom_left, bottom_right;
         double sum;
 
@@ -213,6 +221,7 @@ public abstract class Barcode {
     }
 
     protected static void write_Mat(String filename, Mat img) {
+        // write the contents of a Mat object to disk
         try {
             PrintStream original = new PrintStream(System.out);
             PrintStream printStream = new PrintStream(new FileOutputStream(
@@ -226,8 +235,13 @@ public abstract class Barcode {
 
     }
 
-    protected Mat loadImage() {
-
+    protected Mat loadImage() throws IOException{
+        // reads the image file in the class variable name
+        // Highgui produces an incomprehensible error message if the filename is incorrect so
+        // we do the check ourselves first
+        File f = new File(name);
+        if (!f.isFile())
+            throw new IOException("BarcodeLocalizer was called with an invalid filename " + name);
         return Highgui.imread(name, Highgui.CV_LOAD_IMAGE_COLOR);
     }
 

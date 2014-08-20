@@ -34,13 +34,13 @@ public class MatrixBarcode extends Barcode {
      * @param args the command line arguments
      */        
    
-    public MatrixBarcode(String filename) {
+    public MatrixBarcode(String filename) throws IOException{
         super(filename);
         img_details.searchType = CodeType.MATRIX;
 
     }
 
-    public MatrixBarcode(String filename, boolean debug) {
+    public MatrixBarcode(String filename, boolean debug) throws IOException{
         this(filename);
         DEBUG_IMAGES = debug;
     }
@@ -55,8 +55,8 @@ public class MatrixBarcode extends Barcode {
         connectComponents();
         
         if (DEBUG_IMAGES){
-            write_Mat("E3.csv", img_details.src_processed);
-            ImageDisplay.showImageFrame(img_details.src_processed, "Image img_details.E3 after morph close and open");
+            write_Mat("Processed.csv", img_details.src_processed);
+            ImageDisplay.showImageFrame(img_details.src_processed, "Image after morph close and open");
         }
         List<MatOfPoint> contours = new ArrayList<>();
         // findContours modifies source image so src_processed pass it a cosrc_processed of img_details.E3
@@ -81,9 +81,11 @@ public class MatrixBarcode extends Barcode {
                 if(DEBUG_IMAGES)
                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
                 // get candidate regions to be a barcode
-               // minRect = cb.getCandidateRegion();
+                // expand the region found - this helps capture the entire code including the border zone
                 minRect.size.width += 2 + 2*searchParams.MATRIX_NUM_BLANKS_THRESHOLD;
                 minRect.size.height += 2 + 2*searchParams.MATRIX_NUM_BLANKS_THRESHOLD;
+
+                // rotates candidate region to straighten it based on the angle of the enclosing RotatedRect                
                 ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);  
                 
                 if((statusFlags & TryHarderFlags.POSTPROCESS_RESIZE_BARCODE.value()) != 0)
@@ -154,6 +156,9 @@ public class MatrixBarcode extends Barcode {
     }
 
     private Mat calcHistogramProbabilities() {
+        // calculates probability of each pixel being in a 2D barcode zone based on the 
+        // gradient angles around it
+        
         int right_col, left_col, top_row, bottom_row;
         int DUMMY_ANGLE = 255;
         int BIN_WIDTH = 15;
@@ -213,6 +218,7 @@ public class MatrixBarcode extends Barcode {
   
                 max_angle_count = histLocs[0][1];
                 second_highest_angle_count = histLocs[1][1];                
+        // formula below is from Szentandrasi, Herout, Dubska paper pp. 4
                 angle_diff = Math.abs(histLocs[0][0] - histLocs[1][0]) * BIN_WIDTH;
                 prob = 1 - (Math.abs(angle_diff - 90) / 90.0);
                 prob = prob * 2 * Math.min(max_angle_count, second_highest_angle_count) / (max_angle_count + second_highest_angle_count);
@@ -232,8 +238,6 @@ public class MatrixBarcode extends Barcode {
         // returns an array of size 2 containing the indices of the highest two elements in 
         // the histogram in hist. Used by calcHist method - only works with 1D histogram
         // first element of return array is the highest and second element is second highest
-        // TODO: replace this with a more efficient in-place algorithm
-
       
         Mat hist = histogram.clone();
         int[][] histLocs = new int[2][2];

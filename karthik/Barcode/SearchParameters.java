@@ -20,8 +20,9 @@ import org.opencv.core.Size;
 
 /**
  *
- * @author karthik Contains settings for miscellaneous parameters used in searching for barcodes instances are returned
- * by the factory methods for small and large barcode searches
+ * @author karthik 
+ * Contains settings for miscellaneous parameters used in searching for barcodes 
+ * instances are returned by the factory methods for small and large barcode searches
  */
 class SearchParameters {
     
@@ -35,7 +36,7 @@ class SearchParameters {
     // threshold for ratio of contour area to bounding rectangle area - used to see if contour shape is roughly rectangular
     final double THRESHOLD_AREA_RATIO = 0.6;  
 
-    // multipliers to calculate threshold values below as a function of image size
+    // multipliers to calculate threshold values as a function of image size
     double THRESHOLD_MIN_AREA_MULTIPLIER;
     double THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER;
     double RECT_HEIGHT_MULTIPLIER;
@@ -46,6 +47,7 @@ class SearchParameters {
     protected double THRESHOLD_MIN_GRADIENT_EDGES; // min number of gradient edges in rectangular window to consider as non-zero
     protected double THRESHOLD_MIN_AREA; // min area for candidate region to be considered as a barcode
 
+    // used to expand candidate barcode region by looking for quiet zone around the barcode
     int NUM_BLANKS_THRESHOLD;
     int MATRIX_NUM_BLANKS_THRESHOLD;
 

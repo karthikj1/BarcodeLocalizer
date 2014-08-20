@@ -37,27 +37,31 @@ public class SimpleBarcodeTester {
     private static String fileSeparator = System.getProperty("file.separator");
   
     private static boolean DO_ORACLE = false;    
-
+    private static boolean SEARCH_FOR_LINEAR = true;
+    private static String imgFile;
+    
     public static void main(String[] args) {
         List<BufferedImage> candidateCodes = new ArrayList<>();        
-        boolean SEARCH_FOR_LINEAR = false;
+        
         Barcode barcode;
+        show_usage_syntax();
+        parse_args(args);
+
         // instantiate a class of type LinearBarcode or MatrixBarcode with the image filename 
         // if you are not sure of the barcode type, you can always try both - naturally this increases processing time
-
+        try {        
         if(SEARCH_FOR_LINEAR)
-             barcode = new LinearBarcode("images\\Linear\\barcode4.jpg");
+             barcode = new LinearBarcode(imgFile);
         else
-             barcode = new MatrixBarcode("images\\Matrix\\QRCode3.jpg");
+             barcode = new MatrixBarcode(imgFile);
 
-        try {
             // set the flags you want to use when searching for the barcode
             // flag types are described in the enum TryHarderFlags
             // default is TryHarderFlags.NORMAL
             
                 barcode.setMultipleFlags(TryHarderFlags.ALL_SIZES, TryHarderFlags.POSTPROCESS_RESIZE_BARCODE);
             // findBarcode() returns a List<BufferedImage> with all possible candidate barcode regions from
-            // within the image. These images then get passed to a decoder(here, we use ZXing but could be any decoder)    
+            // within the image. These images then get passed to a decoder(we use ZXing here but could be any decoder)    
                 candidateCodes = barcode.findBarcode();
                 String imgFile = barcode.getName();
                 
@@ -109,5 +113,35 @@ public class SimpleBarcodeTester {
             ImageDisplay.showImageFrame(decodedBarcode, title);
             System.out.println("Barcode text for " + filename + " is " + result.getText());
         }
+    }
+    
+    private static void show_usage_syntax() {
+        System.out.println("Barcode localizer by Karthik Jayaraman");
+        System.out.println("Usage: BarcodeTester <imagefile> [-matrix] [-oracle] ");
+        System.out.println("<imagefile> must be JPEG or PNG");
+        System.out.println("[-matrix] - must be used to search files for matrix codes(QR, DataMatrix etc)");
+        System.out.println("[-oracle] - do comparison with ZXing alone processing the source image");
+    }
+
+    private static void parse_args(String[] args) {
+        int ctr = 0;
+        String arg;
+
+        while (ctr < args.length) {
+            arg = args[ctr++];
+
+            if (arg.equalsIgnoreCase("-oracle")) {
+                DO_ORACLE = true;
+                continue;
+            }
+
+            if (arg.equalsIgnoreCase("-matrix")) {
+                SEARCH_FOR_LINEAR = false;
+                continue;
+            }
+// must be filename if we got here
+            imgFile = arg;            
+        }
+
     }
 }

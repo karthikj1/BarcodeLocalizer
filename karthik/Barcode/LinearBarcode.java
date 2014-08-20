@@ -36,12 +36,12 @@ public class LinearBarcode extends Barcode{
     static int NO_GRADIENT = 127; // corresponds to DUMMY_VARIANCE
     static int HIGH_VARIANCE_GRADIENT = 63; // corresponds to DUMMY_VARIANCE_2
 
-    public LinearBarcode(String filename) {
+    public LinearBarcode(String filename) throws IOException{
         super(filename);
         img_details.searchType = CodeType.LINEAR;
     }
     
-    public LinearBarcode(String filename, boolean debug) {
+    public LinearBarcode(String filename, boolean debug) throws IOException{
         this(filename);
         DEBUG_IMAGES = debug;
     }
@@ -54,8 +54,8 @@ public class LinearBarcode extends Barcode{
         connectComponents();
         
        if(DEBUG_IMAGES){
-            write_Mat("E3.csv", img_details.src_processed);
-            ImageDisplay.showImageFrame(img_details.src_processed, "Image E3 after morph close and open");
+            write_Mat("Processed.csv", img_details.src_processed);
+            ImageDisplay.showImageFrame(img_details.src_processed, "Image after morph close and open");
        }
         List<MatOfPoint> contours = new ArrayList<>();
         // findContours modifies source image so we pass it a copy of img_details.src_processed
@@ -82,13 +82,18 @@ public class LinearBarcode extends Barcode{
                      cb.debug_drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
                      write_Mat("magnitudes.csv", img_details.gradient_magnitude);
                 }
-                minRect = cb.getCandidateRegion();
-               if(DEBUG_IMAGES)
-                    cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_scaled);                                
-                ROI = cb.NormalizeCandidateRegion(barcode_orientation);               
+                
+                minRect = cb.getCandidateRegion(); // expand region to include quiet zone and border zone
+               
+                if(DEBUG_IMAGES)
+                    cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_scaled);
+               
+                // rotate candidate region if it appears skewed
+                ROI = cb.NormalizeCandidateRegion(barcode_orientation);   
                    
                 if((statusFlags & TryHarderFlags.POSTPROCESS_RESIZE_BARCODE.value()) != 0)
-                    ROI = scale_candidateBarcode(ROI);               
+                    ROI = scale_candidateBarcode(ROI);         
+                
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
              }
         }
@@ -232,7 +237,7 @@ public class LinearBarcode extends Barcode{
 
                 left_col = ((j - width_offset - 1) < 0) ? -1 : (j - width_offset - 1);
                 right_col = ((j + width_offset) > cols) ? cols : (j + width_offset);
-                // TODO: do this more efficiently
+                // TODO: could be quicker if we had an integral image to count non-zero elements as well?
                 rect_area = Core.countNonZero(img_details.gradient_magnitude.submat(Math.max(top_row, 0), bottom_row, Math.max(left_col, 0), right_col));                
                 if(rect_area <  searchParams.THRESHOLD_MIN_GRADIENT_EDGES) { 
                     variance.put(i, j, DUMMY_VARIANCE_2);
