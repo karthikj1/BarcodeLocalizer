@@ -10,3 +10,5 @@ Most software barcode decoders cannot easily handle noisy image and require the 
 Compared to ZXing, a popular open source decoding library, the success rate almost doubled for both 1-D and 2-D barcodes.
 
 See http://karthikj1.github.io/BarcodeLocalizer/ for more details.
+
+image_dataset.ZIP contains the image files used for testing.
