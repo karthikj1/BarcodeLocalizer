@@ -39,10 +39,10 @@
 
 <h5>Steps</h5>
 <ul>
-<li>First, preprocess the image by scaling it down if it is large - this improves processing speed. Then convert to grayscale and apply morph black hat to improve contrast</li>
+<li>First, preprocess the image by scaling it down if it is large - this improves processing speed. Then convert to grayscale and apply morphological black hat to improve contrast</li>
 <br>
 <p> Find candidates with the following steps </p>
-<li>Convolve the preprocessed image with Scharr x and y derivs and use that to calculate magnitude and angle of gradients at each point</li>
+<li>Calculate first-order Scharr x and y derivatives on the preprocessed image and use that to calculate magnitude and angle of gradients at each point</li>
 <br>
 <li>Convert the gradient directions so that opposite directions show up as the same i.e. 20 deg. and 200 deg. are the same gradient direction </li>
 <br>
@@ -66,7 +66,7 @@
 
 <p> Instead of variances, we calculate histograms of gradient direction in a window around the pixels and find pixels which primarily have gradients around them that are perpendicular to each other.[4] </p>
 
-<p>This is less computationally intensive than it might appear because we only need to calculate histograms for approximately every 10th pixel and this is after large images have been scaled down to a standard size. This histogram is then dilated and we continue as in the algorithm for linear barcodes by thresholding, contour-finding and normalizing any results.</p>
+<p>This is less computationally intensive than it might appear because we only need to calculate histograms for approximately every 10th pixel and this is *after* large images have been scaled down to a standard size. This histogram is then dilated and we continue as in the algorithm for linear barcodes by thresholding, contour-finding and normalizing any results.</p>
 
 <h3>References</h3>
 <p class = "citation">[1] X. Qi, James Juett, “Barcode localization using bottom-hat filter,” NSF Research Experience for Undergraduates, 2005.</p>
