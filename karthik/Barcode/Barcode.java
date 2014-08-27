@@ -119,11 +119,16 @@ public abstract class Barcode {
             locateBarcode();
         }
 
-        if ((statusFlags & TryHarderFlags.VERY_SMALL.value()) != 0) {
-            searchParams = SearchParameters.getVSmallParameters();
+        if ((statusFlags & TryHarderFlags.VERY_SMALL_LINEAR.value()) != 0) {
+            searchParams = SearchParameters.getVSmall_LinearParameters();
             locateBarcode();
         }
         
+        if ((statusFlags & TryHarderFlags.VERY_SMALL_MATRIX.value()) != 0) {
+            searchParams = SearchParameters.getVSmall_MatrixParameters();
+            locateBarcode();
+        }
+
         return candidateBarcodes;
     }
 
@@ -139,8 +144,8 @@ public abstract class Barcode {
         img_details.src_grayscale = new Mat(rows, cols, CvType.CV_32F);
             
         Imgproc.cvtColor(img_details.src_scaled, img_details.src_grayscale, Imgproc.COLOR_RGB2GRAY);
-        Imgproc.morphologyEx(img_details.src_grayscale, img_details.src_grayscale, Imgproc.MORPH_BLACKHAT,
-            Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.elem_size));
+//        Imgproc.morphologyEx(img_details.src_grayscale, img_details.src_grayscale, Imgproc.MORPH_BLACKHAT,
+//            Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.elem_size));
      }
         
     protected Mat scale_candidateBarcode(Mat candidate){

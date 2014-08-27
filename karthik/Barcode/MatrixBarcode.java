@@ -59,8 +59,8 @@ public class MatrixBarcode extends Barcode {
             ImageDisplay.showImageFrame(img_details.src_processed, "Image after morph close and open");
         }
         List<MatOfPoint> contours = new ArrayList<>();
-        // findContours modifies source image so src_processed pass it a cosrc_processed of img_details.E3
-        // img_details.E3 will be used again shortly to expand the bsrc_processedcode region
+        // findContours modifies source image so src_processed pass it a clone of img_details.E3
+        // img_details.E3 will be used again shortly to expand the bsrcode region
         Imgproc.findContours(img_details.src_processed.clone(),
             contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
         
@@ -71,7 +71,11 @@ public class MatrixBarcode extends Barcode {
             double area = Imgproc.contourArea(contours.get(i));
             minRect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(i).toArray()));
             bounding_rect_area = minRect.size.width * minRect.size.height;
-
+            if(DEBUG_IMAGES){
+                System.out.println("Area is " + area + " MIN_AREA is " + searchParams.THRESHOLD_MIN_AREA);
+                System.out.println("area ratio is " + ((area / bounding_rect_area)));
+            }
+            
             if (area < searchParams.THRESHOLD_MIN_AREA) // ignore contour if it is of too small a region
                 continue;
                         
@@ -161,7 +165,7 @@ public class MatrixBarcode extends Barcode {
         
         int right_col, left_col, top_row, bottom_row;
         int DUMMY_ANGLE = 255;
-        int BIN_WIDTH = 15;
+        int BIN_WIDTH = 15;  // bin width for histogram
         int HIST_INC = 3;
     
         MatOfInt hist = new MatOfInt();

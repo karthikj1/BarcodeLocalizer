@@ -70,6 +70,11 @@ public class LinearBarcode extends Barcode{
             minRect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(i).toArray()));
             bounding_rect_area = minRect.size.width * minRect.size.height;
 
+            if(DEBUG_IMAGES){
+                System.out.println("Area is " + area + " MIN_AREA is " + searchParams.THRESHOLD_MIN_AREA);            
+                System.out.println("area ratio is " + ((area / bounding_rect_area)));
+            }
+
             if (area < searchParams.THRESHOLD_MIN_AREA) // ignore contour if it is of too small a region
                 continue;
                 
