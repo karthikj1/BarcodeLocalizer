@@ -31,7 +31,7 @@ class SearchParameters {
     static final double THRESHOLD_VARIANCE = 75;
 
     Size elem_size, large_elem_size;
-    final int MAX_ROWS = 300;  //image with more rows than MAX_ROWS is scaled down to make finding barcode easier
+    final int MAX_ROWS = 1000;  //image with more rows than MAX_ROWS is scaled down to make finding barcode easier
     
     // threshold for ratio of contour area to bounding rectangle area - used to see if contour shape is roughly rectangular
     double THRESHOLD_AREA_RATIO = 0.6;  
@@ -91,31 +91,13 @@ class SearchParameters {
         return params;
     }
 
-    static SearchParameters getVSmall_MatrixParameters() {
-        // returns parameters used when searching for matrix barcodes that are small relative to image size
-        // used as one of the TRY_HARDER options
-        SearchParameters params = new SearchParameters();
-
-        params.THRESHOLD_MIN_AREA_MULTIPLIER = 0.01;
-        params.THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER = 0.1;
-
-        params.NUM_BLANKS_THRESHOLD = 5;
-        params.MATRIX_NUM_BLANKS_THRESHOLD = 3;
-
-        params.RECT_HEIGHT_MULTIPLIER = 0.01;
-        params.RECT_WIDTH_MULTIPLIER = 0.01;
-
-        params.elem_size = new Size(10, 10);
-        params.large_elem_size = new Size(12, 12);
-        return params;
-    }
     
     static SearchParameters getVSmall_LinearParameters() {
         // returns parameters used when searching for *linear* barcodes that are small relative to image size
         // used as one of the TRY_HARDER options
         SearchParameters params = new SearchParameters();
 
-        params.THRESHOLD_MIN_AREA_MULTIPLIER = 0.01;
+        params.THRESHOLD_MIN_AREA_MULTIPLIER = 0.001;
         params.THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER = 0.1;        
         
         params.NUM_BLANKS_THRESHOLD = 5;
@@ -149,13 +131,34 @@ class SearchParameters {
         return params;
     }
     
-     SearchParameters setImageSpecificParameters(int rows, int cols) {
+    static SearchParameters getVSmall_MatrixParameters() {
+        // returns parameters used when searching for matrix barcodes that are small relative to image size
+        // used as one of the TRY_HARDER options
+        SearchParameters params = new SearchParameters();
+
+        params.THRESHOLD_MIN_AREA_MULTIPLIER = 0.001;
+        params.THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER = 0.3;
+
+        params.NUM_BLANKS_THRESHOLD = 5;
+        params.MATRIX_NUM_BLANKS_THRESHOLD = 3;
+
+        params.RECT_HEIGHT_MULTIPLIER = 0.01;
+        params.RECT_WIDTH_MULTIPLIER = 0.01;
+
+        params.elem_size = new Size(15, 15);
+        params.large_elem_size = new Size(20, 20);
+        return params;
+    }
+ 
+    SearchParameters setImageSpecificParameters(int rows, int cols) {
          /* sets parameters that are specific to the image being processed
           * based on the size of the image(potentially after it is preprocessed and rescaled
          */
-        THRESHOLD_MIN_AREA = THRESHOLD_MIN_AREA_MULTIPLIER * cols * rows;
-        RECT_HEIGHT = (int) (RECT_HEIGHT_MULTIPLIER * rows);
-        RECT_WIDTH = (int) (RECT_WIDTH_MULTIPLIER * cols);
+//        THRESHOLD_MIN_AREA = THRESHOLD_MIN_AREA_MULTIPLIER * cols * rows;
+    //    RECT_HEIGHT = (int) (RECT_HEIGHT_MULTIPLIER * rows);
+    //    RECT_WIDTH = (int) (RECT_WIDTH_MULTIPLIER * cols);
+        THRESHOLD_MIN_AREA = 1000;
+        RECT_HEIGHT = RECT_WIDTH = 10;
         THRESHOLD_MIN_GRADIENT_EDGES = RECT_HEIGHT * RECT_WIDTH * THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER;
         
         return this;

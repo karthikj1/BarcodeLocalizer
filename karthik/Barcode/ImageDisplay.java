@@ -26,9 +26,9 @@ import java.io.InputStream;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
+import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
 
 /**
  *
@@ -103,6 +103,27 @@ public class ImageDisplay extends JPanel {
         displayFrame(new ImageDisplay(openCV_img), title);
     }
 
+public static void showImageFrameGrid(Mat openCV_img, String title) {
+    // convenience function that displays a frame with the image in the parameters
+    Mat displayImg = openCV_img.clone();
+    if(openCV_img.channels() < 3)
+        Imgproc.cvtColor(openCV_img, displayImg, Imgproc.COLOR_GRAY2BGR);
+    
+    int rows = displayImg.rows();
+    int cols = displayImg.cols();
+    // draw rows
+    for(int i = 0; i < rows; i += 10) 
+        Core.line(displayImg, new Point(0, i), new Point(cols - 1, i), new Scalar(0, 255, 0));
+    
+    for(int i = 0; i < cols; i += 10) 
+        Core.line(displayImg, new Point(i, 0), new Point(i, rows - 1), new Scalar(0, 255, 0));
+    
+    if(displayImg.rows() > 750)
+        Imgproc.resize(displayImg, displayImg, new Size(1000, 750));
+    
+    displayFrame(new ImageDisplay(displayImg), title);
+    }
+    
     public static void showImageFrame(BufferedImage img, String title) {
    // convenience function that displays a frame with the image in the parameters
         displayFrame(new ImageDisplay(img), title);
