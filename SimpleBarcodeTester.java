@@ -60,16 +60,14 @@ public class SimpleBarcodeTester {
             // set the flags you want to use when searching for the barcode
             // flag types are described in the enum TryHarderFlags
             // default is TryHarderFlags.NORMAL
-            if(NORMAL_ONLY)
-                barcode.setMultipleFlags(TryHarderFlags.NORMAL, TryHarderFlags.POSTPROCESS_RESIZE_BARCODE);
-            else
-                barcode.setMultipleFlags(TryHarderFlags.VERY_SMALL_LINEAR, TryHarderFlags.POSTPROCESS_RESIZE_BARCODE);
+            
+             barcode.setMultipleFlags(TryHarderFlags.VERY_SMALL_MATRIX, TryHarderFlags.POSTPROCESS_RESIZE_BARCODE);
             // findBarcode() returns a List<BufferedImage> with all possible candidate barcode regions from
             // within the image. These images then get passed to a decoder(we use ZXing here but could be any decoder)    
                 candidateCodes = barcode.findBarcode();
                 String imgFile = barcode.getName();
                 
-                System.out.println("Decoding " + imgFile);
+                System.out.println("Decoding " + imgFile + " " + candidateCodes.size() + " codes found");
                 decodeBarcode(candidateCodes, imgFile, "Localizer");
 
                 if (DO_ORACLE) {
@@ -95,7 +93,7 @@ public class SimpleBarcodeTester {
         Result result = null;
 
         for (BufferedImage candidate : candidateCodes) {            
-
+            decodedBarcode = null;
             LuminanceSource source = new BufferedImageLuminanceSource(candidate);
             BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
             Reader reader = new MultiFormatReader();
