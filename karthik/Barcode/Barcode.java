@@ -182,6 +182,19 @@ public abstract class Barcode {
         // use larger element size for erosion to remove small elements joined by dilation
         Mat small_elemSE, large_elemSE;
         
+        if(searchParams.is_VSmallMatrix){
+            // test out slightly different process for small codes in a large image
+        small_elemSE =  Imgproc.getStructuringElement(Imgproc.MORPH_RECT, searchParams.elem_size);
+        large_elemSE = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, searchParams.large_elem_size);
+            
+        Imgproc.dilate(img_details.src_processed, img_details.src_processed, small_elemSE);
+        Imgproc.erode(img_details.src_processed, img_details.src_processed, large_elemSE);
+        
+        Imgproc.erode(img_details.src_processed, img_details.src_processed, small_elemSE);
+        Imgproc.dilate(img_details.src_processed, img_details.src_processed, large_elemSE);        
+            return;
+        }
+        
         small_elemSE =  Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.elem_size);
         large_elemSE = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.large_elem_size);
             

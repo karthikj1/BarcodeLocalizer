@@ -47,7 +47,7 @@ public class MatrixBarcode extends Barcode {
 
 
     protected List<BufferedImage> locateBarcode() throws IOException{
-
+        
         preprocess_image();
 
         img_details.src_processed = findCandidates();   // find areas with low variance in gradient direction
@@ -86,8 +86,8 @@ public class MatrixBarcode extends Barcode {
                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 255, 128), img_details.src_scaled);
                 // get candidate regions to be a barcode
                 // expand the region found - this helps capture the entire code including the border zone
-                minRect.size.width += 2 + 2*searchParams.MATRIX_NUM_BLANKS_THRESHOLD;
-                minRect.size.height += 2 + 2*searchParams.MATRIX_NUM_BLANKS_THRESHOLD;
+                minRect.size.width += 2 + 2*searchParams.RECT_WIDTH;
+                minRect.size.height += 2 + 2*searchParams.RECT_HEIGHT;
 
                 // rotates candidate region to straighten it based on the angle of the enclosing RotatedRect                
                 ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);  
@@ -96,6 +96,7 @@ public class MatrixBarcode extends Barcode {
                     ROI = scale_candidateBarcode(ROI);               
                 
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
+ 
                 if (DEBUG_IMAGES) {
                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_original);
                 }
@@ -135,24 +136,28 @@ public class MatrixBarcode extends Barcode {
 
         // convert type after modifying angle so that angles above 360 don't get truncated
         img_details.gradient_direction.convertTo(img_details.gradient_direction, CvType.CV_8U);
-        if(DEBUG_IMAGES)
+        if(DEBUG_IMAGES){
             write_Mat("angles.csv", img_details.gradient_direction);
-
+        }
         // calculate magnitude of gradient, normalize and threshold
         img_details.gradient_magnitude = Mat.zeros(scharr_x.size(), scharr_x.type());
         Core.magnitude(scharr_x, scharr_y, img_details.gradient_magnitude);
         Core.normalize(img_details.gradient_magnitude, img_details.gradient_magnitude, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
-    //    Imgproc.threshold(img_details.gradient_magnitude, img_details.gradient_magnitude, 50, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+        Imgproc.threshold(img_details.gradient_magnitude, img_details.gradient_magnitude, 50, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
         if(DEBUG_IMAGES)
             write_Mat("magnitudes.csv", img_details.gradient_magnitude);
 
         // calculate probabilities for each pixel from window around it, normalize and threshold
   //      probabilities = calcHistogramProbabilities();
         probabilities = calcProbabilityTilings();
-    
+        if (DEBUG_IMAGES)
+            write_Mat("probabilities_raw.csv", probabilities);
+     
         Core.normalize(probabilities, probabilities, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);        
-        Imgproc.threshold(probabilities, probabilities, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+        double debug_prob_thresh = Imgproc.threshold(probabilities, probabilities, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+//        double debug_prob_thresh = Imgproc.threshold(probabilities, probabilities, 128, 255, Imgproc.THRESH_BINARY);
         
+        System.out.println("Probability threshold is " + debug_prob_thresh);
         if (DEBUG_IMAGES){
             write_Mat("probabilities.csv", probabilities);
             ImageDisplay.showImageFrameGrid(img_details.gradient_magnitude, "Magnitudes");
@@ -181,7 +186,6 @@ public class MatrixBarcode extends Barcode {
 
         // set angle to DUMMY_ANGLE = 255 at all points where gradient magnitude is 0 i.e. where there are no edges
         // these angles will be ignored in the histogram calculation since that counts only up to 180
-        Imgproc.threshold(img_details.gradient_magnitude, img_details.gradient_magnitude, 50, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
         Mat mask = Mat.zeros(img_details.gradient_direction.size(), CvType.CV_8U);
         Core.inRange(img_details.gradient_magnitude, new Scalar(0), new Scalar(0), mask);
         img_details.gradient_direction.setTo(new Scalar(DUMMY_ANGLE), mask);
@@ -225,10 +229,12 @@ public class MatrixBarcode extends Barcode {
                 second_highest_angle_count = histResult.getSecondBinCount();
                 angle_diff = Math.abs(histResult.max_bin - histResult.second_highest_bin) * BIN_WIDTH;
 */
-                // formula below is from Szentandrasi, Herout, Dubska paper pp. 4
-                prob = 1 - (Math.abs(angle_diff - 90) / 90.0);
+                
+                // formula below is modified from Szentandrasi, Herout, Dubska paper pp. 4
+                prob = 1;
+               // prob = 1 - (Math.abs(angle_diff - 90) / 90.0);
                 prob = prob * 2* Math.min(max_angle_count, second_highest_angle_count) / (max_angle_count + second_highest_angle_count);
-
+                prob = (angle_diff == BIN_WIDTH) ? 0 : prob; // ignores tiles where there is just noise between adjacent bins in the histogram
 // TODO: Replace this with just one pixel per tile
                 for(int r = i; r < i + tileSize; r++)
                     for(int c = j; c< j + tileSize; c++)

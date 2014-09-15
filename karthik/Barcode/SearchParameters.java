@@ -31,7 +31,7 @@ class SearchParameters {
     static final double THRESHOLD_VARIANCE = 75;
 
     Size elem_size, large_elem_size;
-    final int MAX_ROWS = 1000;  //image with more rows than MAX_ROWS is scaled down to make finding barcode easier
+    final int MAX_ROWS = 500;  //image with more rows than MAX_ROWS is scaled down to make finding barcode quicker
     
     // threshold for ratio of contour area to bounding rectangle area - used to see if contour shape is roughly rectangular
     double THRESHOLD_AREA_RATIO = 0.6;  
@@ -50,6 +50,8 @@ class SearchParameters {
     // used to expand candidate barcode region by looking for quiet zone around the barcode
     int NUM_BLANKS_THRESHOLD;
     int MATRIX_NUM_BLANKS_THRESHOLD;
+    
+    boolean is_VSmallMatrix = false;  // sets to true if these are parameters optimized for v small matrix code
 
     private SearchParameters() {
     }
@@ -135,32 +137,31 @@ class SearchParameters {
         // returns parameters used when searching for matrix barcodes that are small relative to image size
         // used as one of the TRY_HARDER options
         SearchParameters params = new SearchParameters();
-
-        params.THRESHOLD_MIN_AREA_MULTIPLIER = 0.001;
+        
+        params.is_VSmallMatrix = true;
         params.THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER = 0.3;
 
-        params.NUM_BLANKS_THRESHOLD = 5;
-        params.MATRIX_NUM_BLANKS_THRESHOLD = 3;
-
-        params.RECT_HEIGHT_MULTIPLIER = 0.01;
-        params.RECT_WIDTH_MULTIPLIER = 0.01;
-
-        params.elem_size = new Size(15, 15);
-        params.large_elem_size = new Size(20, 20);
+        params.RECT_HEIGHT = params.RECT_WIDTH = 5;
+            
+        // set small element size to 50% bigger than tile height/width to erode small elements away
+        params.elem_size = new Size(params.RECT_HEIGHT *1.5, params.RECT_HEIGHT * 1.5);
+        params.large_elem_size = new Size(params.RECT_HEIGHT * 2, params.RECT_HEIGHT * 2);
         return params;
     }
  
     SearchParameters setImageSpecificParameters(int rows, int cols) {
          /* sets parameters that are specific to the image being processed
-          * based on the size of the image(potentially after it is preprocessed and rescaled
+          * based on the size of the image(potentially after it is preprocessed and rescaled)
          */
-//        THRESHOLD_MIN_AREA = THRESHOLD_MIN_AREA_MULTIPLIER * cols * rows;
-    //    RECT_HEIGHT = (int) (RECT_HEIGHT_MULTIPLIER * rows);
-    //    RECT_WIDTH = (int) (RECT_WIDTH_MULTIPLIER * cols);
-        THRESHOLD_MIN_AREA = 1000;
-        RECT_HEIGHT = RECT_WIDTH = 10;
-        THRESHOLD_MIN_GRADIENT_EDGES = RECT_HEIGHT * RECT_WIDTH * THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER;
-        
+        if(is_VSmallMatrix){
+            THRESHOLD_MIN_AREA = 250; // min_area should map roughly to a 100x100 size in the original image
+            THRESHOLD_MIN_GRADIENT_EDGES = RECT_HEIGHT * RECT_WIDTH * THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER;            
+        }
+        else{
+            THRESHOLD_MIN_AREA = THRESHOLD_MIN_AREA_MULTIPLIER * cols * rows;
+            RECT_HEIGHT = (int) (RECT_HEIGHT_MULTIPLIER * rows);
+            RECT_WIDTH = (int) (RECT_WIDTH_MULTIPLIER * cols);
+        }
         return this;
     }
 

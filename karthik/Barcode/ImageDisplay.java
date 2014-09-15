@@ -26,6 +26,7 @@ import java.io.InputStream;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
@@ -113,10 +114,10 @@ public static void showImageFrameGrid(Mat openCV_img, String title) {
     int cols = displayImg.cols();
     // draw rows
     for(int i = 0; i < rows; i += 10) 
-        Core.line(displayImg, new Point(0, i), new Point(cols - 1, i), new Scalar(0, 255, 0));
+        Core.line(displayImg, new Point(0, i), new Point(cols - 1, i), new Scalar(0, 128, 255));
     
     for(int i = 0; i < cols; i += 10) 
-        Core.line(displayImg, new Point(i, 0), new Point(i, rows - 1), new Scalar(0, 255, 0));
+        Core.line(displayImg, new Point(i, 0), new Point(i, rows - 1), new Scalar(0, 128, 255));
     
     if(displayImg.rows() > 750)
         Imgproc.resize(displayImg, displayImg, new Size(1000, 750));
@@ -135,7 +136,8 @@ public static void showImageFrameGrid(Mat openCV_img, String title) {
         frame = new JFrame(title);
         imagePanel = new JPanel();
         imagePanel.add(img);
-        frame.add(imagePanel);
+        JScrollPane scroll = new JScrollPane(imagePanel);
+        frame.add(scroll);
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.pack();
         frame.setVisible(true);        
