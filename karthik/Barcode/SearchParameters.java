@@ -141,11 +141,11 @@ class SearchParameters {
         params.is_VSmallMatrix = true;
         params.THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER = 0.3;
 
-        params.RECT_HEIGHT = params.RECT_WIDTH = 5;
+        params.RECT_HEIGHT = params.RECT_WIDTH = 10;
             
         // set small element size to 50% bigger than tile height/width to erode small elements away
-        params.elem_size = new Size(params.RECT_HEIGHT *1.5, params.RECT_HEIGHT * 1.5);
-        params.large_elem_size = new Size(params.RECT_HEIGHT * 2, params.RECT_HEIGHT * 2);
+        params.elem_size = new Size(1.5, 1.5);
+        params.large_elem_size = new Size(2, 2);
         return params;
     }
  

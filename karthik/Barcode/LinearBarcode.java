@@ -80,18 +80,18 @@ public class LinearBarcode extends Barcode{
                 
             if ((area / bounding_rect_area) > searchParams.THRESHOLD_AREA_RATIO) // check if contour is of a rectangular object
             {
-                CandidateBarcode cb = new CandidateBarcode(img_details, minRect, searchParams);
+                CandidateLinearBarcode cb = new CandidateLinearBarcode(img_details, minRect, searchParams);
                 double barcode_orientation = getBarcodeOrientation(contours, i);                
                 // get candidate regions to be a barcode
                 if(DEBUG_IMAGES){
-                     cb.debug_drawCandidateRegion(minRect, new Scalar(0, 255, 0), img_details.src_scaled);
+                     cb.debug_drawCandidateRegion(new Scalar(0, 255, 0), img_details.src_scaled);
                      write_Mat("magnitudes.csv", img_details.gradient_magnitude);
                 }
                 
                 minRect = cb.getCandidateRegion(); // expand region to include quiet zone and border zone
                
                 if(DEBUG_IMAGES)
-                    cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_scaled);
+                    cb.debug_drawCandidateRegion(new Scalar(0, 0, 255), img_details.src_scaled);
                
                 // rotate candidate region if it appears skewed
                 ROI = cb.NormalizeCandidateRegion(barcode_orientation);   

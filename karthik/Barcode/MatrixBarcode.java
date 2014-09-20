@@ -67,27 +67,27 @@ public class MatrixBarcode extends Barcode {
         double bounding_rect_area = 0;
         RotatedRect minRect;
         Mat ROI;
-        for (int i = 0; i < contours.size(); i++) {
+        int area_multiplier = searchParams.RECT_HEIGHT * searchParams.RECT_WIDTH;  
+    // pictures were downsampled during probability calc so we multiply it by the tile size to get area in the original picture
+        
+            for (int i = 0; i < contours.size(); i++) {
             double area = Imgproc.contourArea(contours.get(i));
             minRect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(i).toArray()));
             bounding_rect_area = minRect.size.width * minRect.size.height;
             if(DEBUG_IMAGES){
-                System.out.println("Area is " + area + " MIN_AREA is " + searchParams.THRESHOLD_MIN_AREA);
+                System.out.println("Area is " + area * area_multiplier + " MIN_AREA is " + searchParams.THRESHOLD_MIN_AREA);
                 System.out.println("area ratio is " + ((area / bounding_rect_area)));
             }
             
-            if (area < searchParams.THRESHOLD_MIN_AREA) // ignore contour if it is of too small a region
+            if (area * area_multiplier < searchParams.THRESHOLD_MIN_AREA) // ignore contour if it is of too small a region
                 continue;
                         
             if ((area / bounding_rect_area) > searchParams.THRESHOLD_AREA_RATIO) // check if contour is of a rectangular object
             {
-                CandidateBarcode cb = new CandidateBarcode(img_details, minRect, searchParams);
+                CandidateMatrixBarcode cb = new CandidateMatrixBarcode(img_details, minRect, searchParams);
                 if(DEBUG_IMAGES)
-                    cb.debug_drawCandidateRegion(minRect, new Scalar(0, 255, 128), img_details.src_scaled);
+                    cb.debug_drawCandidateRegion(new Scalar(0, 255, 128), img_details.src_scaled);
                 // get candidate regions to be a barcode
-                // expand the region found - this helps capture the entire code including the border zone
-                minRect.size.width += 2 + 2*searchParams.RECT_WIDTH;
-                minRect.size.height += 2 + 2*searchParams.RECT_HEIGHT;
 
                 // rotates candidate region to straighten it based on the angle of the enclosing RotatedRect                
                 ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);  
@@ -98,7 +98,7 @@ public class MatrixBarcode extends Barcode {
                 candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
  
                 if (DEBUG_IMAGES) {
-                    cb.debug_drawCandidateRegion(minRect, new Scalar(0, 0, 255), img_details.src_original);
+                    cb.debug_drawCandidateRegion(new Scalar(0, 0, 255), img_details.src_scaled);
                 }
             }
         }
@@ -154,8 +154,8 @@ public class MatrixBarcode extends Barcode {
             write_Mat("probabilities_raw.csv", probabilities);
      
         Core.normalize(probabilities, probabilities, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);        
-        double debug_prob_thresh = Imgproc.threshold(probabilities, probabilities, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-//        double debug_prob_thresh = Imgproc.threshold(probabilities, probabilities, 128, 255, Imgproc.THRESH_BINARY);
+//        double debug_prob_thresh = Imgproc.threshold(probabilities, probabilities, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+        double debug_prob_thresh = Imgproc.threshold(probabilities, probabilities, 128, 255, Imgproc.THRESH_BINARY);
         
         System.out.println("Probability threshold is " + debug_prob_thresh);
         if (DEBUG_IMAGES){
@@ -193,7 +193,7 @@ public class MatrixBarcode extends Barcode {
             write_Mat("angles_modified.csv", img_details.gradient_direction);
 
         int num_edges;
-        Mat prob_mat = Mat.zeros(rows, cols, CvType.CV_32F);
+        Mat prob_mat = Mat.zeros(rows/searchParams.RECT_HEIGHT, cols/searchParams.RECT_WIDTH, CvType.CV_32F);
         double prob, max_angle_count, second_highest_angle_count, angle_diff;
         int[][] histLocs;
         for(int i = 0; i < rows; i += tileSize){
@@ -235,10 +235,8 @@ public class MatrixBarcode extends Barcode {
                // prob = 1 - (Math.abs(angle_diff - 90) / 90.0);
                 prob = prob * 2* Math.min(max_angle_count, second_highest_angle_count) / (max_angle_count + second_highest_angle_count);
                 prob = (angle_diff == BIN_WIDTH) ? 0 : prob; // ignores tiles where there is just noise between adjacent bins in the histogram
-// TODO: Replace this with just one pixel per tile
-                for(int r = i; r < i + tileSize; r++)
-                    for(int c = j; c< j + tileSize; c++)
-                        prob_mat.put(r, c, prob);                             
+               
+                prob_mat.put(i/searchParams.RECT_HEIGHT, j/searchParams.RECT_WIDTH, prob);                             
             }  // for j
         }  // for i
         
