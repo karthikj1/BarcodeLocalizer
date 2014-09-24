@@ -32,9 +32,11 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
 
     CandidateMatrixBarcode(ImageInfo img_details, RotatedRect minRect, SearchParameters params) {
         super(img_details, minRect, params);
-
-        Point candidateCentre = new Point(minRect.center.x * params.RECT_WIDTH, minRect.center.y * params.RECT_HEIGHT);
-        Size candidateSize = new Size(minRect.size.width * params.RECT_WIDTH, minRect.size.height * params.RECT_HEIGHT);
+        
+        int adj_factor = params.RECT_HEIGHT/params.TILE_SIZE;
+        
+        Point candidateCentre = new Point(minRect.center.x * adj_factor, minRect.center.y * adj_factor);
+        Size candidateSize = new Size(minRect.size.width * adj_factor, minRect.size.height * adj_factor);
         RotatedRect candidateRect = new RotatedRect(candidateCentre, candidateSize, minRect.angle);
         this.candidateRegion = candidateRect;
         

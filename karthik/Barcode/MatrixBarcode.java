@@ -59,24 +59,24 @@ public class MatrixBarcode extends Barcode {
             ImageDisplay.showImageFrameGrid(img_details.src_processed, "Image after morph close and open");
         }
         List<MatOfPoint> contours = new ArrayList<>();
-        // findContours modifies source image so src_processed pass it a clone of img_details.E3
-        // img_details.E3 will be used again shortly to expand the bsrcode region
+        // findContours modifies source image so src_processed pass it a clone of img_details.src_processed
+        // img_details.src_processed will be used again shortly to expand the bsrcode region
         Imgproc.findContours(img_details.src_processed.clone(),
             contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
         
         double bounding_rect_area = 0;
         RotatedRect minRect;
         Mat ROI;
-        int area_multiplier = searchParams.RECT_HEIGHT * searchParams.RECT_WIDTH;  
+        int area_multiplier = (searchParams.RECT_HEIGHT * searchParams.RECT_WIDTH)/(searchParams.TILE_SIZE * searchParams.TILE_SIZE);  
     // pictures were downsampled during probability calc so we multiply it by the tile size to get area in the original picture
         
             for (int i = 0; i < contours.size(); i++) {
-            double area = Imgproc.contourArea(contours.get(i));
-            minRect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(i).toArray()));
-            bounding_rect_area = minRect.size.width * minRect.size.height;
-            if(DEBUG_IMAGES){
-                System.out.println("Area is " + area * area_multiplier + " MIN_AREA is " + searchParams.THRESHOLD_MIN_AREA);
-                System.out.println("area ratio is " + ((area / bounding_rect_area)));
+                double area = Imgproc.contourArea(contours.get(i));
+                minRect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(i).toArray()));
+                bounding_rect_area = minRect.size.width * minRect.size.height;
+                if(DEBUG_IMAGES){
+                    System.out.println("Area is " + area * area_multiplier + " MIN_AREA is " + searchParams.THRESHOLD_MIN_AREA);
+                    System.out.println("area ratio is " + ((area / bounding_rect_area)));
             }
             
             if (area * area_multiplier < searchParams.THRESHOLD_MIN_AREA) // ignore contour if it is of too small a region
@@ -174,7 +174,8 @@ public class MatrixBarcode extends Barcode {
 
         int right_col, bottom_row;
         int DUMMY_ANGLE = 255;
-        int BIN_WIDTH = 15;  // bin width for histogram        
+        int BIN_WIDTH = 15;  // bin width for histogram    
+        double adj_factor = searchParams.TILE_SIZE/(searchParams.RECT_HEIGHT * 1.0);
         
         MatOfInt hist = new MatOfInt();
         Mat imgWindow; // used to hold sub-matrices from the image that represent the window around the current point
@@ -193,7 +194,7 @@ public class MatrixBarcode extends Barcode {
             write_Mat("angles_modified.csv", img_details.gradient_direction);
 
         int num_edges;
-        Mat prob_mat = Mat.zeros(rows/searchParams.RECT_HEIGHT, cols/searchParams.RECT_WIDTH, CvType.CV_32F);
+        Mat prob_mat = Mat.zeros((int) (rows * adj_factor), (int) (cols * adj_factor), CvType.CV_32F);
         double prob, max_angle_count, second_highest_angle_count, angle_diff;
         int[][] histLocs;
         for(int i = 0; i < rows; i += tileSize){
@@ -235,8 +236,13 @@ public class MatrixBarcode extends Barcode {
                // prob = 1 - (Math.abs(angle_diff - 90) / 90.0);
                 prob = prob * 2* Math.min(max_angle_count, second_highest_angle_count) / (max_angle_count + second_highest_angle_count);
                 prob = (angle_diff == BIN_WIDTH) ? 0 : prob; // ignores tiles where there is just noise between adjacent bins in the histogram
-               
-                prob_mat.put(i/searchParams.RECT_HEIGHT, j/searchParams.RECT_WIDTH, prob);                             
+
+                int row_offset = (int) (i * adj_factor);
+                int col_offset = (int) (j * adj_factor);
+                
+                for(int r = 0; r < searchParams.TILE_SIZE; r++)
+                   for(int c = 0; c < searchParams.TILE_SIZE; c++)
+                        prob_mat.put(r + row_offset, c + col_offset, prob);                             
             }  // for j
         }  // for i
         

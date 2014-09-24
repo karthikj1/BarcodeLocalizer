@@ -43,6 +43,7 @@ class SearchParameters {
     double RECT_WIDTH_MULTIPLIER;
 
     // size of rectangular window to calculate variance, probability etc around each pixel    
+    protected int TILE_SIZE = 2;  // each window of RECT_HEIGHT X RECT_WIDTH size becomes a square of side TILE_SIZE
     protected int RECT_WIDTH, RECT_HEIGHT;
     protected double THRESHOLD_MIN_GRADIENT_EDGES; // min number of gradient edges in rectangular window to consider as non-zero
     protected double THRESHOLD_MIN_AREA; // min area for candidate region to be considered as a barcode
@@ -144,8 +145,8 @@ class SearchParameters {
         params.RECT_HEIGHT = params.RECT_WIDTH = 10;
             
         // set small element size to 50% bigger than tile height/width to erode small elements away
-        params.elem_size = new Size(1.5, 1.5);
-        params.large_elem_size = new Size(2, 2);
+        params.elem_size = new Size(params.TILE_SIZE * 1.5, params.TILE_SIZE * 1.5);  
+        params.large_elem_size = new Size(params.TILE_SIZE * 2, params.TILE_SIZE * 2);
         return params;
     }
  
