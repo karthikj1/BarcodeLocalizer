@@ -155,10 +155,12 @@ public class MatrixBarcode extends Barcode {
      
         Core.normalize(probabilities, probabilities, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);        
 //        double debug_prob_thresh = Imgproc.threshold(probabilities, probabilities, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
+        
+      //  probabilities.convertTo(probabilities, CvType.CV_8U, 255);  // scale raw probabilities to be from 0 - 255
         double debug_prob_thresh = Imgproc.threshold(probabilities, probabilities, 128, 255, Imgproc.THRESH_BINARY);
         
-        System.out.println("Probability threshold is " + debug_prob_thresh);
         if (DEBUG_IMAGES){
+            System.out.println("Probability threshold is " + debug_prob_thresh);
             write_Mat("probabilities.csv", probabilities);
             ImageDisplay.showImageFrameGrid(img_details.gradient_magnitude, "Magnitudes");
             ImageDisplay.showImageFrameGrid(probabilities, "histogram probabilities");            

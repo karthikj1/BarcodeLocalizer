@@ -38,8 +38,6 @@ public class SimpleBarcodeTester {
   
     private static boolean DO_ORACLE = false;    
     private static boolean SHOW_INTERMEDIATE_STEPS = false;    
-    private static boolean SEARCH_FOR_LINEAR = true;
-    private static boolean NORMAL_ONLY = false;
     private static String imgFile;
     
     public static void main(String[] args) {
@@ -52,9 +50,6 @@ public class SimpleBarcodeTester {
         // instantiate a class of type LinearBarcode or MatrixBarcode with the image filename 
         // if you are not sure of the barcode type, you can always try both - naturally this increases processing time
         try {        
-        if(SEARCH_FOR_LINEAR)
-             barcode = new LinearBarcode(imgFile, SHOW_INTERMEDIATE_STEPS);
-        else
              barcode = new MatrixBarcode(imgFile, SHOW_INTERMEDIATE_STEPS);
 
             // set the flags you want to use when searching for the barcode
@@ -125,9 +120,7 @@ public class SimpleBarcodeTester {
         System.out.println("");
         System.out.println("Usage: BarcodeTester <imagefile> [-matrix] [-oracle] ");
         System.out.println("<imagefile> must be JPEG or PNG");
-        System.out.println("[-matrix] - must be used to search files for matrix codes(QR, DataMatrix etc)");
-        System.out.println("[-debug] - shows images for intermediate steps and saves intermediate files");
-        System.out.println("[-all] - use ALL setting for TryHarderFlags");
+        System.out.println("[-debug] - shows images for intermediate steps and saves intermediate files");        
         System.out.println("[-oracle] - do comparison with ZXing alone processing the source image");
         System.out.println("");
     }
@@ -149,15 +142,6 @@ public class SimpleBarcodeTester {
                 continue;
             }
 
-            if (arg.equalsIgnoreCase("-all")) {
-                NORMAL_ONLY = false;
-                continue;
-            }
-
-            if (arg.equalsIgnoreCase("-matrix")) {
-                SEARCH_FOR_LINEAR = false;
-                continue;
-            }
 // must be filename if we got here
             imgFile = arg;            
         }
