@@ -16,7 +16,6 @@
  */
 package karthik.Barcode;
 
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -49,7 +48,7 @@ public abstract class Barcode {
     protected ImageInfo img_details;
     protected int rows, cols;
  
-    List<BufferedImage> candidateBarcodes = new ArrayList<>();
+    List<CandidateResult> candidateBarcodes = new ArrayList<>();
 
     static enum CodeType {LINEAR, MATRIX};        
     
@@ -97,9 +96,9 @@ public abstract class Barcode {
     }
     
     // actual locateBarcode algo must be implemented in child class
-    protected abstract List<BufferedImage> locateBarcode() throws IOException;
+    protected abstract List<CandidateResult> locateBarcode() throws IOException;
     
-    public List<BufferedImage> findBarcode() throws IOException{
+    public List<CandidateResult> findBarcode() throws IOException{
         /*
         finds barcodes using searches according to the flags set in statusFlags
         */

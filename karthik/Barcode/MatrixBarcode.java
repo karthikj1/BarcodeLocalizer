@@ -16,7 +16,6 @@
  */
 package karthik.Barcode;
 
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,7 +45,7 @@ public class MatrixBarcode extends Barcode {
     }
 
 
-    protected List<BufferedImage> locateBarcode() throws IOException{
+    protected List<CandidateResult> locateBarcode() throws IOException{
         
         preprocess_image();
 
@@ -66,7 +65,7 @@ public class MatrixBarcode extends Barcode {
         
         double bounding_rect_area = 0;
         RotatedRect minRect;
-        Mat ROI;
+        CandidateResult ROI;
         int area_multiplier = (searchParams.RECT_HEIGHT * searchParams.RECT_WIDTH)/(searchParams.TILE_SIZE * searchParams.TILE_SIZE);  
     // pictures were downsampled during probability calc so we multiply it by the tile size to get area in the original picture
         
@@ -93,9 +92,10 @@ public class MatrixBarcode extends Barcode {
                 ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);  
                 
                 if((statusFlags & TryHarderFlags.POSTPROCESS_RESIZE_BARCODE.value()) != 0)
-                    ROI = scale_candidateBarcode(ROI);               
+                    ROI.ROI = scale_candidateBarcode(ROI.ROI);               
                 
-                candidateBarcodes.add(ImageDisplay.getBufImg(ROI));
+                ROI.candidate = ImageDisplay.getBufImg(ROI.ROI);
+                candidateBarcodes.add(ROI);
  
                 if (DEBUG_IMAGES) {
                     cb.debug_drawCandidateRegion(new Scalar(0, 0, 255), img_details.src_scaled);

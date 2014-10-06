@@ -42,7 +42,7 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
         
     }
     
-    Mat NormalizeCandidateRegion(double angle) {
+    CandidateResult NormalizeCandidateRegion(double angle) {
         /* candidateRegion is the RotatedRect which contains a candidate region for the barcode
          // angle is the rotation angle or USE_ROTATED_RECT_ANGLE for this function to 
          // estimate rotation angle from the rect parameter
@@ -54,6 +54,7 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
          */
         Mat rotation_matrix, enlarged;
         double rotation_angle;
+        CandidateResult result = new CandidateResult();
 
         int orig_rows = img_details.src_original.rows();
         int orig_cols = img_details.src_original.cols();
@@ -84,7 +85,8 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
         scaledRegion.size.width *= scale_factor;
         Point[] scaledCorners = new Point[4];
         scaledRegion.points(scaledCorners);
-
+        result.ROI_coords = scaledCorners; // save coordinates of ROI from original image
+        
         if (angle == Barcode.USE_ROTATED_RECT_ANGLE)
             rotation_angle = estimate_barcode_orientation();
         else
@@ -144,6 +146,8 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
         Imgproc.warpPerspective(rotated, perspectiveOut, perspectiveTransform, perspectiveOut.size(),
             Imgproc.INTER_CUBIC);
 
-        return perspectiveOut;
+        result.ROI = perspectiveOut;
+        
+        return result;
     }
 }
