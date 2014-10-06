@@ -59,7 +59,10 @@ public class SimpleBarcodeTester {
              barcode.setMultipleFlags(TryHarderFlags.VERY_SMALL_MATRIX, TryHarderFlags.POSTPROCESS_RESIZE_BARCODE);
             // findBarcode() returns a List<BufferedImage> with all possible candidate barcode regions from
             // within the image. These images then get passed to a decoder(we use ZXing here but could be any decoder)    
-                candidateCodes = barcode.findBarcode();
+                List<CandidateResult> results = barcode.findBarcode();
+                for(CandidateResult res: results)
+                    candidateCodes.add(res.candidate);
+                                
                 String imgFile = barcode.getName();
                 
                 System.out.println("Decoding " + imgFile + " " + candidateCodes.size() + " codes found");
