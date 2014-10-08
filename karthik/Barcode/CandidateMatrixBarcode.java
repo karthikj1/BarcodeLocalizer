@@ -87,10 +87,9 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
         scaledRegion.points(scaledCorners);
         // scaledCorners contains the coordinates of the candidate region in the Mat enlarged
         // lets get the coordinates of the ROI in the original image and save it
-        result.ROI_coords = scaledCorners; 
-        for(Point p:result.ROI_coords){
-            p.x -= offsetX;
-            p.y -= offsetY;
+        result.ROI_coords = new Point[4];
+        for (int r = 0; r < 4; r ++){
+            result.ROI_coords[r] = new Point(scaledCorners[r].x - offsetX, scaledCorners[r].y - offsetY);
         }
         
         if (angle == Barcode.USE_ROTATED_RECT_ANGLE)
