@@ -91,7 +91,7 @@ public class MatrixBarcode extends Barcode {
                 // rotates candidate region to straighten it based on the angle of the enclosing RotatedRect                
                 ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);  
                 // TODO: remove commented out code below - tester to make sure coordinates can be displayed on source image
-                /*
+               /* 
                 Point[] rectPoints = ROI.ROI_coords;
                 Scalar colour = new Scalar(255, 0,0);
                 StringBuffer coords = new StringBuffer("");
