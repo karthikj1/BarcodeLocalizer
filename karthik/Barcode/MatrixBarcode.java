@@ -90,7 +90,6 @@ public class MatrixBarcode extends Barcode {
 
                 // rotates candidate region to straighten it based on the angle of the enclosing RotatedRect                
                 ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);  
-                
                 if((statusFlags & TryHarderFlags.POSTPROCESS_RESIZE_BARCODE.value()) != 0)
                     ROI.ROI = scale_candidateBarcode(ROI.ROI);               
                 

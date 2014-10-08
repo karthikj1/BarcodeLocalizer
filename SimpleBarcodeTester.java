@@ -61,11 +61,11 @@ public class SimpleBarcodeTester {
             // within the image. These images then get passed to a decoder(we use ZXing here but could be any decoder)    
                 List<CandidateResult> results = barcode.findBarcode();
                 for(CandidateResult res: results)
-                    candidateCodes.add(res.candidate);
+                    candidateCodes.add(res.candidate);                    
                                 
                 String imgFile = barcode.getName();
                 
-                System.out.println("Decoding " + imgFile + " " + candidateCodes.size() + " codes found");
+                System.out.println("Decoding " + imgFile + " " + candidateCodes.size() + " codes found");                                
                 decodeBarcode(candidateCodes, imgFile, "Localizer");
 
                 if (DO_ORACLE) {
