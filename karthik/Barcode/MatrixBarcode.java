@@ -18,6 +18,7 @@ package karthik.Barcode;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
