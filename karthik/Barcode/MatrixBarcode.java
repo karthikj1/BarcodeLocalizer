@@ -18,7 +18,6 @@ package karthik.Barcode;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
@@ -44,6 +43,11 @@ public class MatrixBarcode extends Barcode {
         DEBUG_IMAGES = debug;
     }
 
+    public MatrixBarcode(String image_name, Mat img) throws IOException{
+        super(image_name, img);
+        img_details.searchType = CodeType.MATRIX;
+        DEBUG_IMAGES = false;
+    }
 
     protected List<CandidateResult> locateBarcode() throws IOException{
         

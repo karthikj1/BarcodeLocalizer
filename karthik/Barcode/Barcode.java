@@ -69,6 +69,19 @@ public abstract class Barcode {
         DEBUG_IMAGES = false;
       }
 
+    Barcode(String image_name, Mat img) throws IOException{
+        // used usually for video files where one frame captured from the video is passed in as an OpenCV Mat object
+        name = image_name;
+        img_details = new ImageInfo(img);
+        
+        rows = img_details.src_original.rows();
+        cols = img_details.src_original.cols();
+        
+        searchParams = SearchParameters.getNormalParameters();
+        
+        DEBUG_IMAGES = false;
+      }
+
     public void setOneFlag(TryHarderFlags flag){
         // sets the specified flag to TRUE, other flags are untouched
         statusFlags = statusFlags | flag.value();
