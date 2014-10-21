@@ -56,7 +56,7 @@ public class MatrixBarcode extends Barcode {
 
         img_details.src_processed = findCandidates();   // find areas with low variance in gradient direction
 
-        connectComponents();
+    //    connectComponents();
         
         if (DEBUG_IMAGES){
             write_Mat("Processed.csv", img_details.src_processed);
@@ -95,19 +95,6 @@ public class MatrixBarcode extends Barcode {
 
                 // rotates candidate region to straighten it based on the angle of the enclosing RotatedRect                
                 ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);  
-                // TODO: remove commented out code below - tester to make sure coordinates can be displayed on source image
-               /* 
-                Point[] rectPoints = ROI.ROI_coords;
-                Scalar colour = new Scalar(255, 0,0);
-                StringBuffer coords = new StringBuffer("");
-                Mat temp = img_details.src_original.clone();
-                      for (int j = 0; j < 3; j++){
-                           coords.append("(" + rectPoints[j].x + "," + rectPoints[j].y + ")");
-                            Core.line(temp, rectPoints[j], rectPoints[j + 1], colour, 5, Core.LINE_AA, 0);
-                      }
-                       Core.line(temp, rectPoints[3], rectPoints[0], colour, 5, Core.LINE_AA, 0);
-                ImageDisplay.showImageFrameGrid(temp, "Original image with marked region " + coords.toString());
-                */
                 if((statusFlags & TryHarderFlags.POSTPROCESS_RESIZE_BARCODE.value()) != 0)
                     ROI.ROI = scale_candidateBarcode(ROI.ROI);               
                 

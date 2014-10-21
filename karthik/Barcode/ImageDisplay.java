@@ -104,6 +104,24 @@ public class ImageDisplay extends JPanel {
         displayFrame(new ImageDisplay(openCV_img), title);
     }
 
+    public static ImageDisplay getImageFrame(Mat openCV_img, String title){
+        // convenience function that displays a frame with the image in the parameters
+        ImageDisplay window = new ImageDisplay(openCV_img);
+        displayFrame(window, title);
+        return window;        
+    }
+    
+    public void updateImage(Mat img, String title){
+        try {
+            image = getBufImg(img);
+        } catch (IOException e) {
+            //Let us know what happened  
+            System.out.println("Error converting openCV image: " + e.getMessage());
+        }
+        frame.setTitle(title);
+        this.repaint();
+    }
+    
 public static void showImageFrameGrid(Mat openCV_img, String title) {
     // convenience function that displays a frame with the image in the parameters
     Mat displayImg = openCV_img.clone();
@@ -141,5 +159,9 @@ public static void showImageFrameGrid(Mat openCV_img, String title) {
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.pack();
         frame.setVisible(true);        
+    }
+    
+    public void close(){
+        frame.dispose();
     }
 }

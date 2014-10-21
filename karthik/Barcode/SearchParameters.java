@@ -34,7 +34,7 @@ class SearchParameters {
     final int MAX_ROWS = 500;  //image with more rows than MAX_ROWS is scaled down to make finding barcode quicker
     
     // threshold for ratio of contour area to bounding rectangle area - used to see if contour shape is roughly rectangular
-    double THRESHOLD_AREA_RATIO = 0.6;  
+    double THRESHOLD_AREA_RATIO = 0.4;  
 
     // multipliers to calculate threshold values as a function of image size
     double THRESHOLD_MIN_AREA_MULTIPLIER;
@@ -155,7 +155,7 @@ class SearchParameters {
           * based on the size of the image(potentially after it is preprocessed and rescaled)
          */
         if(is_VSmallMatrix){
-            THRESHOLD_MIN_AREA = 250; // min_area should map roughly to a 100x100 size in the original image
+            THRESHOLD_MIN_AREA = 250; 
             THRESHOLD_MIN_GRADIENT_EDGES = RECT_HEIGHT * RECT_WIDTH * THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER;            
         }
         else{
