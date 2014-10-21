@@ -54,18 +54,18 @@ public class MatrixBarcode extends Barcode {
         
         preprocess_image();
 
-        img_details.src_processed = findCandidates();   // find areas with low variance in gradient direction
+        img_details.probabilities = findCandidates();   // find areas with low variance in gradient direction
 
     //    connectComponents();
         
         if (DEBUG_IMAGES){
-            write_Mat("Processed.csv", img_details.src_processed);
-            ImageDisplay.showImageFrameGrid(img_details.src_processed, "Image after morph close and open");
+            write_Mat("Processed.csv", img_details.probabilities);
+            ImageDisplay.showImageFrameGrid(img_details.probabilities, "Image after morph close and open");
         }
         List<MatOfPoint> contours = new ArrayList<>();
-        // findContours modifies source image so src_processed pass it a clone of img_details.src_processed
-        // img_details.src_processed will be used again shortly to expand the bsrcode region
-        Imgproc.findContours(img_details.src_processed.clone(),
+        // findContours modifies source image so probabilities pass it a clone of img_details.probabilities
+        // img_details.probabilities will be used again shortly to expand the bsrcode region
+        Imgproc.findContours(img_details.probabilities.clone(),
             contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
         
         double bounding_rect_area = 0;

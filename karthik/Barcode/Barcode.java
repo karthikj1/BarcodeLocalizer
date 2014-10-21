@@ -199,22 +199,22 @@ public abstract class Barcode {
         small_elemSE =  Imgproc.getStructuringElement(Imgproc.MORPH_RECT, searchParams.elem_size);
         large_elemSE = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, searchParams.large_elem_size);
             
-        Imgproc.dilate(img_details.src_processed, img_details.src_processed, small_elemSE);
-        Imgproc.erode(img_details.src_processed, img_details.src_processed, large_elemSE);
+        Imgproc.dilate(img_details.probabilities, img_details.probabilities, small_elemSE);
+        Imgproc.erode(img_details.probabilities, img_details.probabilities, large_elemSE);
         
-        Imgproc.erode(img_details.src_processed, img_details.src_processed, small_elemSE);
-        Imgproc.dilate(img_details.src_processed, img_details.src_processed, large_elemSE);        
+        Imgproc.erode(img_details.probabilities, img_details.probabilities, small_elemSE);
+        Imgproc.dilate(img_details.probabilities, img_details.probabilities, large_elemSE);        
             return;
         }
         
         small_elemSE =  Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.elem_size);
         large_elemSE = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.large_elem_size);
             
-        Imgproc.dilate(img_details.src_processed, img_details.src_processed, small_elemSE);
-        Imgproc.erode(img_details.src_processed, img_details.src_processed, large_elemSE);
+        Imgproc.dilate(img_details.probabilities, img_details.probabilities, small_elemSE);
+        Imgproc.erode(img_details.probabilities, img_details.probabilities, large_elemSE);
         
-        Imgproc.erode(img_details.src_processed, img_details.src_processed, small_elemSE);
-        Imgproc.dilate(img_details.src_processed, img_details.src_processed, large_elemSE);
+        Imgproc.erode(img_details.probabilities, img_details.probabilities, small_elemSE);
+        Imgproc.dilate(img_details.probabilities, img_details.probabilities, large_elemSE);
     }
     
         protected void scaleImage() {
