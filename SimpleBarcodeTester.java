@@ -93,7 +93,8 @@ public class SimpleBarcodeTester {
             Core.line(image, rectPoints[3], rectPoints[0], colour, 2, Core.LINE_AA, 0);
             ImageDisplay.showImageFrame(image, "Barcode text - " + result);
         }
-        video.release();
+        if(IS_CAMERA)
+            video.release();
     }
 
     private static Map<CharSequence, BarcodeLocation> processVideo(String filename) {
@@ -170,7 +171,7 @@ public class SimpleBarcodeTester {
             video.read(image);
             ImageDisplay videoDisp = ImageDisplay.getImageFrame(image, "Video Frames");
 
-            long end_time = System.currentTimeMillis() + 1000;
+            long end_time = System.currentTimeMillis() + 240000;
             int i = 0;
             while (System.currentTimeMillis() < end_time) {
                 i += 1;
@@ -263,7 +264,7 @@ public class SimpleBarcodeTester {
         BufferedImage decodedBarcode = null;
         String title = null;
         Result result = null;
-
+        
         for (CandidateResult cr : candidateCodes) {
             BufferedImage candidate = cr.candidate;
             decodedBarcode = null;
