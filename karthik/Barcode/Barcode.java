@@ -52,11 +52,6 @@ public abstract class Barcode {
 
     static enum CodeType {LINEAR, MATRIX};        
     
-    static {
-        // loads OpenCV native library
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-    }
-
     Barcode(String filename) throws IOException{
         name = filename;
         img_details = new ImageInfo(loadImage());

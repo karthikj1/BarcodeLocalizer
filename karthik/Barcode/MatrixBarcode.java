@@ -118,8 +118,7 @@ public class MatrixBarcode extends Barcode {
         //  modifies class variable img_details.gradient_direction to contain gradient directions
         Mat probabilities;
         img_details.gradient_direction = Mat.zeros(rows, cols, CvType.CV_32F);
-
-        double angle;
+        
         Mat scharr_x, scharr_y;
         scharr_x = new Mat(rows, cols, CvType.CV_32F);
         scharr_y = new Mat(rows, cols, CvType.CV_32F);
@@ -130,14 +129,14 @@ public class MatrixBarcode extends Barcode {
         // calc angle using Core.phase function - should be quicker than using atan2 manually
         Core.phase(scharr_x, scharr_y, img_details.gradient_direction, true);
 
-        for (int i = 0; i < rows; i++)
-            for (int j = 0; j < cols; j++) {
-                angle = img_details.gradient_direction.get(i, j)[0];
-                angle = angle % 180;
-                angle = (angle > 170) ? 0 : angle;
-                img_details.gradient_direction.put(i, j, angle);
-            }
-
+        // convert angles from 180-360 to 0-180 range and set angles from 170-180 to 0
+        Mat mask  = new Mat();
+        Core.inRange(img_details.gradient_direction, new Scalar(180), new Scalar(360), mask);
+        Core.add(img_details.gradient_direction, new Scalar(-180), img_details.gradient_direction, mask);
+        Core.inRange(img_details.gradient_direction, new Scalar(170), new Scalar(180), mask);
+        img_details.gradient_direction.setTo(new Scalar(0), mask);
+        mask = null;
+        
         // convert type after modifying angle so that angles above 360 don't get truncated
         img_details.gradient_direction.convertTo(img_details.gradient_direction, CvType.CV_8U);
         if(DEBUG_IMAGES){
@@ -223,19 +222,12 @@ public class MatrixBarcode extends Barcode {
                     continue;
                 imgWindow = img_details.gradient_direction.submat(i, bottom_row, j, right_col);
                 Imgproc.calcHist(Arrays.asList(imgWindow), mChannels, new Mat(), hist, mHistSize, mRanges, false);
-                hist.convertTo(hist, CvType.CV_32S);
+                hist.convertTo(hist, CvType.CV_8U);
                 histLocs = getMaxElements(hist);
   
                 max_angle_count = histLocs[0][1];
                 second_highest_angle_count = histLocs[1][1];                
                 angle_diff = Math.abs(histLocs[0][0] - histLocs[1][0]) * BIN_WIDTH;
-/*
-                Mat weights = img_details.gradient_magnitude.submat(top_row, bottom_row, left_col, right_col);
-                HistogramResult histResult = HistogramResult.calcHist(imgWindow, null , 0, 179, BIN_WIDTH);
-                max_angle_count = histResult.getMaxBinCount();
-                second_highest_angle_count = histResult.getSecondBinCount();
-                angle_diff = Math.abs(histResult.max_bin - histResult.second_highest_bin) * BIN_WIDTH;
-*/
                 
                 // formula below is modified from Szentandrasi, Herout, Dubska paper pp. 4
                 prob = 1;
@@ -256,111 +248,21 @@ public class MatrixBarcode extends Barcode {
                 
     }
     
-    private Mat calcHistogramProbabilities() {
-        // calculates probability of each pixel being in a 2D barcode zone based on the 
-        // gradient angles around it
-        
-        int right_col, left_col, top_row, bottom_row;
-        int DUMMY_ANGLE = 255;
-        int BIN_WIDTH = 15;  // bin width for histogram
-        int HIST_INC = 3;
-        
-        MatOfInt hist = new MatOfInt();
-        Mat imgWindow; // used to hold sub-matrices from the image that represent the window around the current point
-        int bins = 180 / BIN_WIDTH;
-
-        MatOfInt mHistSize = new MatOfInt(bins);
-        MatOfFloat mRanges = new MatOfFloat(0, 179);
-        MatOfInt mChannels = new MatOfInt(0);
-
-        // set angle to DUMMY_ANGLE = 255 at all points where gradient magnitude is 0 i.e. where there are no edges
-        // these angles will be ignored in the histogram calculation since that counts only up to 180
-        Imgproc.threshold(img_details.gradient_magnitude, img_details.gradient_magnitude, 50, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-        Mat mask = Mat.zeros(img_details.gradient_direction.size(), CvType.CV_8U);
-        Core.inRange(img_details.gradient_magnitude, new Scalar(0), new Scalar(0), mask);
-        img_details.gradient_direction.setTo(new Scalar(DUMMY_ANGLE), mask);
-        if(DEBUG_IMAGES)
-            write_Mat("angles_modified.csv", img_details.gradient_direction);
-
-        int width_offset = searchParams.RECT_WIDTH / 2;
-        int height_offset = searchParams.RECT_HEIGHT / 2;
-        int rect_area;
-        Mat prob_mat = Mat.zeros(rows, cols, CvType.CV_32F);
-        double prob, max_angle_count, second_highest_angle_count, angle_diff;
-        int[][] histLocs;
-        for (int i = 0; i < rows; i += HIST_INC) {
-            // first calculate the row locations of the rectangle and set them to -1 
-            // if they are outside the matrix bounds
-
-            top_row = ((i - height_offset - 1) < 0) ? 0 : (i - height_offset - 1);
-            bottom_row = ((i + height_offset) > rows) ? rows : (i + height_offset);
-
-            for (int j = 0; j < cols; j += HIST_INC) {
-                // first check if there is a gradient at this pixel
-                // no processing needed if so
-                if (img_details.gradient_magnitude.get(i, j)[0] == 0)
-                    continue;
-
-                // then calculate the column locations of the rectangle and set them to -1 
-                // if they are outside the matrix bounds                
-                left_col = ((j - width_offset - 1) < 0) ? 0 : (j - width_offset - 1);
-                right_col = ((j + width_offset) > cols) ? cols : (j + width_offset);
-                // TODO: do this more efficiently               
-
-                rect_area = Core.countNonZero(img_details.gradient_magnitude.submat(top_row, bottom_row, left_col, right_col));
-                
-                
-                if (rect_area < searchParams.THRESHOLD_MIN_GRADIENT_EDGES) 
-                // if gradient density is below the threshold level, prob of matrix code at this pixel is 0
-                    continue;
-                imgWindow = img_details.gradient_direction.submat(top_row, bottom_row, left_col, right_col);
-                Imgproc.calcHist(Arrays.asList(imgWindow), mChannels, new Mat(), hist, mHistSize, mRanges, false);
-                hist.convertTo(hist, CvType.CV_32S);
-                histLocs = getMaxElements(hist);
-  
-                max_angle_count = histLocs[0][1];
-                second_highest_angle_count = histLocs[1][1];                
-                angle_diff = Math.abs(histLocs[0][0] - histLocs[1][0]) * BIN_WIDTH;
-/*
-                Mat weights = img_details.gradient_magnitude.submat(top_row, bottom_row, left_col, right_col);
-                HistogramResult histResult = HistogramResult.calcHist(imgWindow, null , 0, 179, BIN_WIDTH);
-                max_angle_count = histResult.getMaxBinCount();
-                second_highest_angle_count = histResult.getSecondBinCount();
-                angle_diff = Math.abs(histResult.max_bin - histResult.second_highest_bin) * BIN_WIDTH;
-*/
-                // formula below is from Szentandrasi, Herout, Dubska paper pp. 4
-                prob = 1 - (Math.abs(angle_diff - 90) / 90.0);
-                prob = prob * 2* Math.min(max_angle_count, second_highest_angle_count) / (max_angle_count + second_highest_angle_count);
-
-                prob_mat.put(i, j, prob);                             
-            }  // for j
-        }  // for i
-        // dilate matrix so that each pixel gets dilated to fill a square around it
-        if(HIST_INC > 1){
-            Mat dilation_elem = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(HIST_INC, HIST_INC));
-            Imgproc.morphologyEx(prob_mat, prob_mat, Imgproc.MORPH_DILATE, dilation_elem);
-        }
-        return prob_mat;
-
-    }
-    
     private int[][] getMaxElements(MatOfInt histogram) {
         // returns an array of size 2 containing the indices of the highest two elements in 
         // the histogram in hist. Used by calcHist method - only works with 1D histogram
         // first element of return array is the highest and second element is second highest
       
-        Mat hist = histogram.clone();
         int[][] histLocs = new int[2][2];
-        Core.MinMaxLocResult result = Core.minMaxLoc(hist);
-        histLocs[0][0] = (int) result.maxLoc.y;
-        histLocs[0][1] = (int) hist.get(histLocs[0][0], 0)[0];        
 
-        // now set highest-val location to a low number. The previous second-highest bin is now the highest bin
-        hist.put((int) result.maxLoc.y, (int) result.maxLoc.x, 0);
-        result = Core.minMaxLoc(hist);
-        histLocs[1][0] = (int) result.maxLoc.y;
-        histLocs[1][1] = (int) hist.get(histLocs[1][0], 0)[0];
-
+        Mat histIdx = new Mat();
+        Core.sortIdx(histogram, histIdx, Core.SORT_EVERY_COLUMN + Core.SORT_DESCENDING);
+      
+        histLocs[0][0] = (int) histIdx.get(0, 0)[0];
+        histLocs[0][1] = (int) histogram.get(histLocs[0][0], 0)[0];
+        histLocs[1][0] = (int) histIdx.get(1, 0)[0];
+        histLocs[1][1] = (int) histogram.get(histLocs[1][0], 0)[0];
+ 
         return histLocs;
     }
 }
