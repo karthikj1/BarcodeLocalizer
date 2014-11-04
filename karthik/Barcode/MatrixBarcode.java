@@ -29,20 +29,20 @@ import org.opencv.imgproc.Imgproc;
  */
 public class MatrixBarcode extends Barcode {
 
-    /**
-     * @param args the command line arguments
-     */        
-   
-    public MatrixBarcode(String filename) throws IOException{
-        super(filename);
-        img_details.searchType = CodeType.MATRIX;
-
-    }
+    // used in histogram calculation
+    private static final int DUMMY_ANGLE = 255;
+    private static final int BIN_WIDTH = 15;  // bin width for histogram    
+    private static final int bins = 180 / BIN_WIDTH;
+    private int tileSize;
+    private double adj_factor;
+    private static final Scalar DUMMY_ANGLE_SCALAR = new Scalar(DUMMY_ANGLE);
+    private static final Scalar ZERO_SCALAR = new Scalar(0);
 
     public MatrixBarcode(String filename, boolean debug) throws IOException{
-        this(filename);
+        super(filename);
         DEBUG_IMAGES = debug;
-    }
+        img_details.searchType = CodeType.MATRIX;
+   }
 
     public MatrixBarcode(String image_name, Mat img) throws IOException{
         super(image_name, img);
@@ -57,12 +57,13 @@ public class MatrixBarcode extends Barcode {
         img_details.probabilities = findCandidates();   // find areas with low variance in gradient direction
 
     //    connectComponents();
-        
-        if (DEBUG_IMAGES){
-            write_Mat("Processed.csv", img_details.probabilities);
-            ImageDisplay.showImageFrameGrid(img_details.probabilities, "Image after morph close and open");
-        }
-        List<MatOfPoint> contours = new ArrayList<>();
+        /*
+         if (DEBUG_IMAGES){
+         write_Mat("Processed.csv", img_details.probabilities);
+         ImageDisplay.showImageFrameGrid(img_details.probabilities, "Image after morph close and open");
+         }
+         */
+        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         // findContours modifies source image so probabilities pass it a clone of img_details.probabilities
         // img_details.probabilities will be used again shortly to expand the bsrcode region
         Imgproc.findContours(img_details.probabilities.clone(),
@@ -71,25 +72,27 @@ public class MatrixBarcode extends Barcode {
         double bounding_rect_area = 0;
         RotatedRect minRect;
         CandidateResult ROI;
-        int area_multiplier = (searchParams.RECT_HEIGHT * searchParams.RECT_WIDTH)/(searchParams.TILE_SIZE * searchParams.TILE_SIZE);  
+        int area_multiplier = (searchParams.RECT_HEIGHT * searchParams.RECT_WIDTH) / (searchParams.TILE_SIZE * searchParams.TILE_SIZE);
     // pictures were downsampled during probability calc so we multiply it by the tile size to get area in the original picture
-        
-            for (int i = 0; i < contours.size(); i++) {
-                double area = Imgproc.contourArea(contours.get(i));
-                minRect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(i).toArray()));
-                bounding_rect_area = minRect.size.width * minRect.size.height;
-                if(DEBUG_IMAGES){
-                    System.out.println("Area is " + area * area_multiplier + " MIN_AREA is " + searchParams.THRESHOLD_MIN_AREA);
-                    System.out.println("area ratio is " + ((area / bounding_rect_area)));
-            }
-            
+
+        for (int i = 0; i < contours.size(); i++) {
+            double area = Imgproc.contourArea(contours.get(i));
+
             if (area * area_multiplier < searchParams.THRESHOLD_MIN_AREA) // ignore contour if it is of too small a region
                 continue;
-                        
+
+            minRect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(i).toArray()));
+            bounding_rect_area = minRect.size.width * minRect.size.height;
+            if (DEBUG_IMAGES) {
+                System.out.println(
+                    "Area is " + area * area_multiplier + " MIN_AREA is " + searchParams.THRESHOLD_MIN_AREA);
+                System.out.println("area ratio is " + ((area / bounding_rect_area)));
+            }
+
             if ((area / bounding_rect_area) > searchParams.THRESHOLD_AREA_RATIO) // check if contour is of a rectangular object
             {
                 CandidateMatrixBarcode cb = new CandidateMatrixBarcode(img_details, minRect, searchParams);
-                if(DEBUG_IMAGES)
+                if (DEBUG_IMAGES)
                     cb.debug_drawCandidateRegion(new Scalar(0, 255, 128), img_details.src_scaled);
                 // get candidate regions to be a barcode
 
@@ -100,13 +103,12 @@ public class MatrixBarcode extends Barcode {
                 
                 ROI.candidate = ImageDisplay.getBufImg(ROI.ROI);
                 candidateBarcodes.add(ROI);
- 
-                if (DEBUG_IMAGES) {
+
+                if (DEBUG_IMAGES)
                     cb.debug_drawCandidateRegion(new Scalar(0, 0, 255), img_details.src_scaled);
-                }
             }
         }
-        if(DEBUG_IMAGES)
+        if (DEBUG_IMAGES)
             ImageDisplay.showImageFrameGrid(img_details.src_scaled, name + " with candidate regions");
 
         return candidateBarcodes;
@@ -175,16 +177,13 @@ public class MatrixBarcode extends Barcode {
     // calculates probability of each tile being in a 2D barcode region
     // tiles must be square
         assert(searchParams.RECT_HEIGHT == searchParams.RECT_WIDTH): "RECT_HEIGHT and RECT_WIDTH must be equal in searchParams imageSpecificParams";
-        int tileSize = searchParams.RECT_HEIGHT;
 
         int right_col, bottom_row;
-        int DUMMY_ANGLE = 255;
-        int BIN_WIDTH = 15;  // bin width for histogram    
-        double adj_factor = searchParams.TILE_SIZE/(searchParams.RECT_HEIGHT * 1.0);
+        tileSize = searchParams.RECT_HEIGHT;
+        adj_factor = searchParams.TILE_SIZE/(searchParams.RECT_HEIGHT * 1.0);
         
         MatOfInt hist = new MatOfInt();
         Mat imgWindow; // used to hold sub-matrices from the image that represent the window around the current point
-        int bins = 180 / BIN_WIDTH;
 
         MatOfInt mHistSize = new MatOfInt(bins);
         MatOfFloat mRanges = new MatOfFloat(0, 179);
@@ -193,22 +192,27 @@ public class MatrixBarcode extends Barcode {
         // set angle to DUMMY_ANGLE = 255 at all points where gradient magnitude is 0 i.e. where there are no edges
         // these angles will be ignored in the histogram calculation since that counts only up to 180
         Mat mask = Mat.zeros(img_details.gradient_direction.size(), CvType.CV_8U);
-        Core.inRange(img_details.gradient_magnitude, new Scalar(0), new Scalar(0), mask);
-        img_details.gradient_direction.setTo(new Scalar(DUMMY_ANGLE), mask);
+        Core.inRange(img_details.gradient_magnitude, ZERO_SCALAR, ZERO_SCALAR, mask);
+        img_details.gradient_direction.setTo(DUMMY_ANGLE_SCALAR, mask);
         if(DEBUG_IMAGES)
             write_Mat("angles_modified.csv", img_details.gradient_direction);
 
+        Mat prob_mat = Mat.zeros((int) (rows * adj_factor + 1), (int) (cols * adj_factor + 1), CvType.CV_8U);
+        Mat prob_window;
+
         int num_edges;
-        Mat prob_mat = Mat.zeros((int) (rows * adj_factor), (int) (cols * adj_factor), CvType.CV_32F);
-        double prob, max_angle_count, second_highest_angle_count, angle_diff;
-        int[][] histLocs;
-        for(int i = 0; i < rows; i += tileSize){
+        double prob;
+        int max_angle_idx, second_highest_angle_index, max_angle_count, second_highest_angle_count, angle_diff;
+        
+        Mat histIdx = new Mat();
+        int offset_increment = (int) (tileSize * adj_factor);
+        for(int i = 0, row_offset = 0; i < rows; i += tileSize, row_offset += offset_increment){
             // first calculate the row locations of the rectangle and set them to -1 
             // if they are outside the matrix bounds
 
             bottom_row = ((i + tileSize) > rows) ? rows : (i + tileSize);
 
-            for(int j = 0; j < cols; j += tileSize){
+            for(int j = 0, col_offset = 0; j < cols; j += tileSize, col_offset += offset_increment){
 
                 // then calculate the column locations of the rectangle and set them to -1 
                 // if they are outside the matrix bounds                
@@ -222,47 +226,27 @@ public class MatrixBarcode extends Barcode {
                     continue;
                 imgWindow = img_details.gradient_direction.submat(i, bottom_row, j, right_col);
                 Imgproc.calcHist(Arrays.asList(imgWindow), mChannels, new Mat(), hist, mHistSize, mRanges, false);
-                hist.convertTo(hist, CvType.CV_8U);
-                histLocs = getMaxElements(hist);
+                Core.sortIdx(hist, histIdx, Core.SORT_EVERY_COLUMN + Core.SORT_DESCENDING);
+
+                max_angle_idx = (int) histIdx.get(0, 0)[0];
+                max_angle_count = (int) hist.get(max_angle_idx, 0)[0];
+
+                second_highest_angle_index = (int) histIdx.get(1, 0)[0];
+                second_highest_angle_count = (int) hist.get(second_highest_angle_index, 0)[0];                
   
-                max_angle_count = histLocs[0][1];
-                second_highest_angle_count = histLocs[1][1];                
-                angle_diff = Math.abs(histLocs[0][0] - histLocs[1][0]) * BIN_WIDTH;
+                angle_diff = Math.abs(max_angle_idx - second_highest_angle_index);
                 
                 // formula below is modified from Szentandrasi, Herout, Dubska paper pp. 4
-                prob = 1;
-               // prob = 1 - (Math.abs(angle_diff - 90) / 90.0);
-                prob = prob * 2* Math.min(max_angle_count, second_highest_angle_count) / (max_angle_count + second_highest_angle_count);
-                prob = (angle_diff == BIN_WIDTH) ? 0 : prob; // ignores tiles where there is just noise between adjacent bins in the histogram
-
-                int row_offset = (int) (i * adj_factor);
-                int col_offset = (int) (j * adj_factor);
+                prob = 2.0 * Math.min(max_angle_count, second_highest_angle_count) / (max_angle_count + second_highest_angle_count);
+                prob = (angle_diff == 1) ? 0 : prob; // ignores tiles where there is just noise between adjacent bins in the histogram
                 
-                for(int r = 0; r < searchParams.TILE_SIZE; r++)
-                   for(int c = 0; c < searchParams.TILE_SIZE; c++)
-                        prob_mat.put(r + row_offset, c + col_offset, prob);                             
+                prob_window = prob_mat.submat(row_offset, row_offset + searchParams.TILE_SIZE, col_offset, col_offset + searchParams.TILE_SIZE);
+                prob_window.setTo(new Scalar((int) (prob*255)));
+                        
             }  // for j
         }  // for i
         
         return prob_mat;
                 
     }
-    
-    private int[][] getMaxElements(MatOfInt histogram) {
-        // returns an array of size 2 containing the indices of the highest two elements in 
-        // the histogram in hist. Used by calcHist method - only works with 1D histogram
-        // first element of return array is the highest and second element is second highest
-      
-        int[][] histLocs = new int[2][2];
-
-        Mat histIdx = new Mat();
-        Core.sortIdx(histogram, histIdx, Core.SORT_EVERY_COLUMN + Core.SORT_DESCENDING);
-      
-        histLocs[0][0] = (int) histIdx.get(0, 0)[0];
-        histLocs[0][1] = (int) histogram.get(histLocs[0][0], 0)[0];
-        histLocs[1][0] = (int) histIdx.get(1, 0)[0];
-        histLocs[1][1] = (int) histogram.get(histLocs[1][0], 0)[0];
- 
-        return histLocs;
-    }
-}
+ }

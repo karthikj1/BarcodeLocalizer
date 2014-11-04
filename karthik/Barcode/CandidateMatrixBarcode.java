@@ -71,7 +71,7 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
             offsetX + orig_cols));
         // scale candidate region back up to original size to return cropped part from *original* image 
         // need the 1.0 there to force floating-point arithmetic from int values
-        double scale_factor = orig_rows / (1.0 * img_details.src_scaled.rows());        
+        double scale_factor = orig_rows / (1.0 * img_details.src_grayscale.rows());        
          
         // expand the region found - this helps capture the entire code including the border zone
           candidateRegion.size.width +=  2 * params.RECT_WIDTH;
