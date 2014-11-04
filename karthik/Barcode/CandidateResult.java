@@ -34,8 +34,7 @@ public class CandidateResult {
         StringBuffer result = new StringBuffer("");
         
         for (Point p:ROI_coords){
-            result.append("(" + p.x + "," + p.y +"), ");
-                    
+            result.append("(" + Math.round(p.x * 1000)/1000.0 + "," + Math.round(p.y * 1000)/1000.0 +"), ");                    
         }
         return result.toString();
     }
