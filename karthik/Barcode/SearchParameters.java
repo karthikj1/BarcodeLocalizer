@@ -52,6 +52,9 @@ class SearchParameters {
     int NUM_BLANKS_THRESHOLD;
     int MATRIX_NUM_BLANKS_THRESHOLD;
     
+    protected int tileSize;
+    protected double scale_factor;
+
     boolean is_VSmallMatrix = false;  // sets to true if these are parameters optimized for v small matrix code
 
     private SearchParameters() {
@@ -72,6 +75,8 @@ class SearchParameters {
 
         params.elem_size = new Size(10, 10);
         params.large_elem_size = new Size(12, 12);
+        params.tileSize = params.RECT_HEIGHT;
+        params.scale_factor = params.TILE_SIZE/(params.RECT_HEIGHT * 1.0);
         return params;
     }
 
@@ -91,6 +96,8 @@ class SearchParameters {
 
         params.elem_size = new Size(10, 10);
         params.large_elem_size = new Size(12, 12);
+        params.tileSize = params.RECT_HEIGHT;
+        params.scale_factor = params.TILE_SIZE/(params.RECT_HEIGHT * 1.0);
         return params;
     }
 
@@ -111,6 +118,8 @@ class SearchParameters {
 
         params.elem_size = new Size(5, 5);
         params.large_elem_size = new Size(6, 6);
+        params.tileSize = params.RECT_HEIGHT;
+        params.scale_factor = params.TILE_SIZE/(params.RECT_HEIGHT * 1.0);
         return params;
     }
  
@@ -131,6 +140,8 @@ class SearchParameters {
 
         params.elem_size = new Size(20, 20);
         params.large_elem_size = new Size(24, 24);
+        params.tileSize = params.RECT_HEIGHT;
+        params.scale_factor = params.TILE_SIZE/(params.RECT_HEIGHT * 1.0);
         return params;
     }
     
@@ -147,6 +158,9 @@ class SearchParameters {
         // set small element size to 50% bigger than tile height/width to erode small elements away
         params.elem_size = new Size(params.TILE_SIZE * 1.5, params.TILE_SIZE * 1.5);  
         params.large_elem_size = new Size(params.TILE_SIZE * 2, params.TILE_SIZE * 2);
+        params.tileSize = params.RECT_HEIGHT;
+        params.scale_factor = params.TILE_SIZE/(params.RECT_HEIGHT * 1.0);
+
         return params;
     }
  

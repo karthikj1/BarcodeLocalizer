@@ -33,11 +33,16 @@ public class MatrixBarcode extends Barcode {
     private static final int DUMMY_ANGLE = 255;
     private static final int BIN_WIDTH = 15;  // bin width for histogram    
     private static final int bins = 180 / BIN_WIDTH;
-    private int tileSize;
-    private double adj_factor;
     private static final Scalar DUMMY_ANGLE_SCALAR = new Scalar(DUMMY_ANGLE);
     private static final Scalar ZERO_SCALAR = new Scalar(0);
 
+    private static final MatOfInt mHistSize = new MatOfInt(bins);
+    private static final MatOfFloat mRanges = new MatOfFloat(0, 179);
+    private static final MatOfInt mChannels = new MatOfInt(0);
+    private static MatOfInt hist = new MatOfInt();
+    private static Mat histIdx = new Mat();
+    
+  
     public MatrixBarcode(String filename, boolean debug, TryHarderFlags flag) throws IOException{
         super(filename, flag);
         DEBUG_IMAGES = debug;
@@ -53,17 +58,9 @@ public class MatrixBarcode extends Barcode {
 
     public List<CandidateResult> locateBarcode() throws IOException{
         
-//        preprocess_image();
-
         img_details.probabilities = findCandidates();   // find areas with low variance in gradient direction
 
     //    connectComponents();
-        /*
-         if (DEBUG_IMAGES){
-         write_Mat("Processed.csv", img_details.probabilities);
-         ImageDisplay.showImageFrameGrid(img_details.probabilities, "Image after morph close and open");
-         }
-         */
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         // findContours modifies source image so probabilities pass it a clone of img_details.probabilities
         // img_details.probabilities will be used again shortly to expand the bsrcode region
@@ -120,25 +117,17 @@ public class MatrixBarcode extends Barcode {
         // find candidate regions that may contain barcodes
         //  modifies class variable img_details.gradient_direction to contain gradient directions
         Mat probabilities;
-        img_details.gradient_direction = Mat.zeros(rows, cols, CvType.CV_32F);
-        
-        Mat scharr_x, scharr_y;
-        scharr_x = new Mat(rows, cols, CvType.CV_32F);
-        scharr_y = new Mat(rows, cols, CvType.CV_32F);
-
-        Imgproc.Scharr(img_details.src_grayscale, scharr_x, CvType.CV_32F, 1, 0);
-        Imgproc.Scharr(img_details.src_grayscale, scharr_y, CvType.CV_32F, 0, 1);
+        Imgproc.Scharr(img_details.src_grayscale, img_details.scharr_x, CvType.CV_32F, 1, 0);
+        Imgproc.Scharr(img_details.src_grayscale, img_details.scharr_y, CvType.CV_32F, 0, 1);
 
         // calc angle using Core.phase function - should be quicker than using atan2 manually
-        Core.phase(scharr_x, scharr_y, img_details.gradient_direction, true);
+        Core.phase(img_details.scharr_x, img_details.scharr_y, img_details.gradient_direction, true);
 
         // convert angles from 180-360 to 0-180 range and set angles from 170-180 to 0
-        Mat mask  = new Mat();
-        Core.inRange(img_details.gradient_direction, new Scalar(180), new Scalar(360), mask);
-        Core.add(img_details.gradient_direction, new Scalar(-180), img_details.gradient_direction, mask);
-        Core.inRange(img_details.gradient_direction, new Scalar(170), new Scalar(180), mask);
-        img_details.gradient_direction.setTo(new Scalar(0), mask);
-        mask = null;
+        Core.inRange(img_details.gradient_direction, new Scalar(180), new Scalar(360), img_details.mask);
+        Core.add(img_details.gradient_direction, new Scalar(-180), img_details.gradient_direction, img_details.mask);
+        Core.inRange(img_details.gradient_direction, new Scalar(170), new Scalar(180), img_details.mask);
+        img_details.gradient_direction.setTo(new Scalar(0), img_details.mask);
         
         // convert type after modifying angle so that angles above 360 don't get truncated
         img_details.gradient_direction.convertTo(img_details.gradient_direction, CvType.CV_8U);
@@ -146,15 +135,13 @@ public class MatrixBarcode extends Barcode {
             write_Mat("angles.csv", img_details.gradient_direction);
         }
         // calculate magnitude of gradient, normalize and threshold
-        img_details.gradient_magnitude = Mat.zeros(scharr_x.size(), scharr_x.type());
-        Core.magnitude(scharr_x, scharr_y, img_details.gradient_magnitude);
+        Core.magnitude(img_details.scharr_x, img_details.scharr_y, img_details.gradient_magnitude);
         Core.normalize(img_details.gradient_magnitude, img_details.gradient_magnitude, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
         Imgproc.threshold(img_details.gradient_magnitude, img_details.gradient_magnitude, 50, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
         if(DEBUG_IMAGES)
             write_Mat("magnitudes.csv", img_details.gradient_magnitude);
 
         // calculate probabilities for each pixel from window around it, normalize and threshold
-  //      probabilities = calcHistogramProbabilities();
         probabilities = calcProbabilityTilings();
         if (DEBUG_IMAGES)
             write_Mat("probabilities_raw.csv", probabilities);
@@ -180,44 +167,34 @@ public class MatrixBarcode extends Barcode {
         assert(searchParams.RECT_HEIGHT == searchParams.RECT_WIDTH): "RECT_HEIGHT and RECT_WIDTH must be equal in searchParams imageSpecificParams";
 
         int right_col, bottom_row;
-        tileSize = searchParams.RECT_HEIGHT;
-        adj_factor = searchParams.TILE_SIZE/(searchParams.RECT_HEIGHT * 1.0);
         
-        MatOfInt hist = new MatOfInt();
         Mat imgWindow; // used to hold sub-matrices from the image that represent the window around the current point
-
-        MatOfInt mHistSize = new MatOfInt(bins);
-        MatOfFloat mRanges = new MatOfFloat(0, 179);
-        MatOfInt mChannels = new MatOfInt(0);
-
-        // set angle to DUMMY_ANGLE = 255 at all points where gradient magnitude is 0 i.e. where there are no edges
-        // these angles will be ignored in the histogram calculation since that counts only up to 180
-        Mat mask = Mat.zeros(img_details.gradient_direction.size(), CvType.CV_8U);
-        Core.inRange(img_details.gradient_magnitude, ZERO_SCALAR, ZERO_SCALAR, mask);
-        img_details.gradient_direction.setTo(DUMMY_ANGLE_SCALAR, mask);
-        if(DEBUG_IMAGES)
-            write_Mat("angles_modified.csv", img_details.gradient_direction);
-
-        Mat prob_mat = Mat.zeros((int) (rows * adj_factor + 1), (int) (cols * adj_factor + 1), CvType.CV_8U);
         Mat prob_window;
 
         int num_edges;
         double prob;
         int max_angle_idx, second_highest_angle_index, max_angle_count, second_highest_angle_count, angle_diff;
         
-        Mat histIdx = new Mat();
-        int offset_increment = (int) (tileSize * adj_factor);
-        for(int i = 0, row_offset = 0; i < rows; i += tileSize, row_offset += offset_increment){
+        int offset_increment = (int) (searchParams.tileSize * searchParams.scale_factor);
+        prob_mat.setTo(ZERO_SCALAR);
+        // set angle to DUMMY_ANGLE = 255 at all points where gradient magnitude is 0 i.e. where there are no edges
+        // these angles will be ignored in the histogram calculation since that counts only up to 180
+        Core.inRange(img_details.gradient_magnitude, ZERO_SCALAR, ZERO_SCALAR, img_details.mask);
+        img_details.gradient_direction.setTo(DUMMY_ANGLE_SCALAR, img_details.mask);
+        if(DEBUG_IMAGES)
+            write_Mat("angles_modified.csv", img_details.gradient_direction);
+
+        for(int i = 0, row_offset = 0; i < rows; i += searchParams.tileSize, row_offset += offset_increment){
             // first calculate the row locations of the rectangle and set them to -1 
             // if they are outside the matrix bounds
 
-            bottom_row = ((i + tileSize) > rows) ? rows : (i + tileSize);
+            bottom_row = ((i + searchParams.tileSize) > rows) ? rows : (i + searchParams.tileSize);
 
-            for(int j = 0, col_offset = 0; j < cols; j += tileSize, col_offset += offset_increment){
+            for(int j = 0, col_offset = 0; j < cols; j += searchParams.tileSize, col_offset += offset_increment){
 
                 // then calculate the column locations of the rectangle and set them to -1 
                 // if they are outside the matrix bounds                
-                right_col = ((j + tileSize) > cols) ? cols : (j + tileSize);
+                right_col = ((j + searchParams.tileSize) > cols) ? cols : (j + searchParams.tileSize);
                 // TODO: do this more efficiently               
 
                 num_edges = Core.countNonZero(img_details.gradient_magnitude.submat(i, bottom_row, j, right_col));                

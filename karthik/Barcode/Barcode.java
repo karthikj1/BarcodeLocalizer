@@ -49,9 +49,10 @@ public abstract class Barcode {
     SearchParameters searchParams; //various parameters and thresholds used during the search 
     protected ImageInfo img_details;
     protected int rows, cols;
-
+    
     List<CandidateResult> candidateBarcodes = new ArrayList<CandidateResult>();
-
+    protected Mat prob_mat;
+    
     static enum CodeType {
 
         LINEAR, MATRIX
@@ -156,6 +157,7 @@ public abstract class Barcode {
 
         searchParams.setImageSpecificParameters(rows, cols);
         // do pre-processing to increase contrast
+        prob_mat = Mat.zeros((int) (rows * searchParams.scale_factor + 1), (int) (cols * searchParams.scale_factor + 1), CvType.CV_8U);
         img_details.src_grayscale = new Mat(rows, cols, CvType.CV_32F);
 
         Imgproc.cvtColor(img_details.src_scaled, img_details.src_grayscale, Imgproc.COLOR_RGB2GRAY);

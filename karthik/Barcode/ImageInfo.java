@@ -29,11 +29,19 @@ class ImageInfo {
     // while processing src_original to search for a barcode
     Mat src_original, src_scaled, src_grayscale, probabilities;
     Mat gradient_direction, gradient_magnitude;
+    Mat scharr_x, scharr_y;
+    Mat mask;
     
     Barcode.CodeType searchType;
 
     ImageInfo(Mat src) {
        src_original = src;
+       gradient_direction = new Mat();
+       gradient_magnitude = new Mat();
+       
+       scharr_x = new Mat();
+       scharr_y = new Mat();
+       mask = new Mat();
     }       
     
 }
