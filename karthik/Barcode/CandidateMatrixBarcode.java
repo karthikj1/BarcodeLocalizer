@@ -102,7 +102,7 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
 
         // perform the affine transformation
         rotation_matrix.convertTo(rotation_matrix, CvType.CV_32F); // convert type so matrix multip. works properly
-        List<Point> newCornerPoints = new ArrayList<>();
+        List<Point> newCornerPoints = new ArrayList<Point>();
         Mat newCornerCoord = Mat.zeros(2, 1, CvType.CV_32F);
         Mat coord = Mat.ones(3, 1, CvType.CV_32F);
         // calculate the new location for each corner point of the rectangle ROI
@@ -139,7 +139,7 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
         height = length(rectPoints[1].x, rectPoints[1].y, rectPoints[0].x, rectPoints[0].y);
         width = length(rectPoints[2].x, rectPoints[2].y, rectPoints[0].x, rectPoints[0].y);
         // create destination points for warpPerspective to map to
-        List<Point> transformedPoints = new ArrayList<>();
+        List<Point> transformedPoints = new ArrayList<Point>();
         transformedPoints.add(new Point(0, 0));
         transformedPoints.add(new Point(0, height));
         transformedPoints.add(new Point(width, 0));

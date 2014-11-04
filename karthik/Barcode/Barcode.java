@@ -32,6 +32,7 @@ import org.opencv.imgproc.Imgproc;
  */
 public abstract class Barcode {
 // parent class containing common methods and definitions for 1D and 2D barcode searches
+
     public String getName() {
         return name;
     }
@@ -42,193 +43,183 @@ public abstract class Barcode {
     protected static double USE_ROTATED_RECT_ANGLE = 361;
 
     protected String name; // filename of barcode image file
-    
+
     boolean DEBUG_IMAGES;   // flag if we want to show intermediate steps for debugging
 
     SearchParameters searchParams; //various parameters and thresholds used during the search 
     protected ImageInfo img_details;
     protected int rows, cols;
- 
+
     List<CandidateResult> candidateBarcodes = new ArrayList<CandidateResult>();
 
-    static enum CodeType {LINEAR, MATRIX};        
-    
-    Barcode(String filename) throws IOException{
+    static enum CodeType {
+
+        LINEAR, MATRIX
+    };
+
+    Barcode(String filename, TryHarderFlags flag) throws IOException {
         name = filename;
         img_details = new ImageInfo(loadImage());
-        
+
         rows = img_details.src_original.rows();
         cols = img_details.src_original.cols();
-        
-        searchParams = SearchParameters.getNormalParameters();
-        
-        DEBUG_IMAGES = false;
-      }
 
-    Barcode(String image_name, Mat img) throws IOException{
-        // used usually for video files where one frame captured from the video is passed in as an OpenCV Mat object
-        name = image_name;
+        setBarcodeSize(flag);
+
+        DEBUG_IMAGES = false;
+    }
+
+    Barcode(Mat img, TryHarderFlags flag) throws IOException {
+        // used in mobile implementation to avoid recreating Mat objects repeatedly
         img_details = new ImageInfo(img);
-        
+
         rows = img_details.src_original.rows();
         cols = img_details.src_original.cols();
-        
-        searchParams = SearchParameters.getNormalParameters();
-        
+
+        setBarcodeSize(flag);
         DEBUG_IMAGES = false;
-      }
-
-    public void setOneFlag(TryHarderFlags flag){
-        // sets the specified flag to TRUE, other flags are untouched
-        sizeFlag = sizeFlag | flag.value();
     }
-    
-    public void clearFlag(TryHarderFlags flag){
-        // sets the specified flag to FALSE, other flags are untouched
-        sizeFlag = sizeFlag & (~flag.value());
-    }
-    
-    public void resetFlags(){
-        // resets status flag to default of searching with NORMAL only
-        sizeFlag = TryHarderFlags.NORMAL.value();
-    }    
 
-    public void setMultipleFlags(TryHarderFlags... flags){
-        // clears the flags and sets it to only the ones specified in the argument list
-        sizeFlag = 0;
-        
-        for (TryHarderFlags flag : flags)
-            setOneFlag(flag);
+    public static boolean updateImage(Barcode barcode, final Mat img, final String img_name) {
+        barcode.name = img_name;
+        return updateImage(barcode, img);
+    }
+
+    public static boolean updateImage(Barcode barcode, Mat img) {
+        // used for video or camera feed when all images are the same size
+        int orig_rows = barcode.img_details.src_original.rows();
+        int orig_cols = barcode.img_details.src_original.cols();
+
+        int new_rows = img.rows();
+        int new_cols = img.cols();
+
+        if ((orig_rows != new_rows) || (orig_cols != new_cols))
+            return false;
+
+        barcode.candidateBarcodes.clear();
+        barcode.img_details.src_original = img;
+        Imgproc.resize(barcode.img_details.src_original, barcode.img_details.src_scaled, barcode.img_details.src_scaled.size(), 0, 0,
+            Imgproc.INTER_AREA);
+        Imgproc.cvtColor(barcode.img_details.src_scaled, barcode.img_details.src_grayscale, Imgproc.COLOR_RGB2GRAY);
+
+        return true;
+    }
+
+    public void setBarcodeSize(TryHarderFlags size) {
         // at least one of the size flags must be set so it chooses NORMAL as the default if nothing is set
-        if((sizeFlag & TryHarderFlags.ALL_SIZES.value()) == 0)
-            setOneFlag(TryHarderFlags.NORMAL);
+        sizeFlag = size.value();
+        setSearchParameters(size);
     }
-    
+
+    public void doPostProcessResizeBarcode(boolean postProcess) {
+        postProcessResizeBarcode = postProcess;
+    }
+
+    protected void setSearchParameters(TryHarderFlags flags) {
+        // should not be used when multiple size flags are set
+        // it will set the search parameters to one of them and ignore the others
+
+        if ((sizeFlag & TryHarderFlags.SMALL.value()) != 0)
+            searchParams = SearchParameters.getSmallParameters();
+
+        if ((sizeFlag & TryHarderFlags.LARGE.value()) != 0)
+            searchParams = SearchParameters.getLargeParameters();
+
+        if ((sizeFlag & TryHarderFlags.NORMAL.value()) != 0)
+            searchParams = SearchParameters.getNormalParameters();
+
+        if ((sizeFlag & TryHarderFlags.VERY_SMALL_MATRIX.value()) != 0)
+            searchParams = SearchParameters.getVSmall_MatrixParameters();
+
+        preprocess_image();
+    }
+
     // actual locateBarcode algo must be implemented in child class
     public abstract List<CandidateResult> locateBarcode() throws IOException;
-    
-    public List<CandidateResult> findBarcode() throws IOException{
-        /*
-        finds barcodes using searches according to the flags set in sizeFlag
-        */
 
-        if ((sizeFlag & TryHarderFlags.NORMAL.value()) != 0) {
-            searchParams = SearchParameters.getNormalParameters();
-            locateBarcode();
-        }
-        
-        if ((sizeFlag & TryHarderFlags.SMALL.value()) != 0) {
-            searchParams = SearchParameters.getSmallParameters();
-            locateBarcode();
-        }
-        
-        if ((sizeFlag & TryHarderFlags.LARGE.value()) != 0) {
-            searchParams = SearchParameters.getLargeParameters();
-            locateBarcode();
-        }
-
-        if ((sizeFlag & TryHarderFlags.VERY_SMALL_LINEAR.value()) != 0) {
-            searchParams = SearchParameters.getVSmall_LinearParameters();
-            locateBarcode();
-        }
-        
-        if ((sizeFlag & TryHarderFlags.VERY_SMALL_MATRIX.value()) != 0) {
-            searchParams = SearchParameters.getVSmall_MatrixParameters();
-            locateBarcode();
-        }
-
-        return candidateBarcodes;
-    }
-
-        protected void preprocess_image() {
-       // pre-process image to convert to grayscale and do morph black hat
+    protected void preprocess_image() {
+   // pre-process image to convert to grayscale and do morph black hat
         // also resizes image if it is above a specified size and sets the search parameters
         // based on image size
-        
-        scaleImage();
+
+    // shrink image if it is above a certain size   
+        // it reduces image size for large images which helps with processing speed
+        // and reducing sensitivity to barcode size within the image
+        if (rows > searchParams.MAX_ROWS) {
+            cols = (int) (cols * (searchParams.MAX_ROWS * 1.0 / rows));
+            rows = searchParams.MAX_ROWS;
+            img_details.src_scaled = new Mat(rows, cols, CvType.CV_32F);
+            Imgproc.resize(img_details.src_original, img_details.src_scaled, img_details.src_scaled.size(), 0, 0, Imgproc.INTER_AREA);
+        }
+        if (img_details.src_scaled == null)
+            img_details.src_scaled = img_details.src_original.clone();
+
         searchParams.setImageSpecificParameters(rows, cols);
         // do pre-processing to increase contrast
-        img_details.src_scaled.convertTo(img_details.src_scaled, CvType.CV_32FC3);
         img_details.src_grayscale = new Mat(rows, cols, CvType.CV_32F);
-            
+
         Imgproc.cvtColor(img_details.src_scaled, img_details.src_grayscale, Imgproc.COLOR_RGB2GRAY);
-//        Imgproc.morphologyEx(img_details.src_grayscale, img_details.src_grayscale, Imgproc.MORPH_BLACKHAT,
-//            Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.elem_size));
-     }
-        
-    protected Mat scale_candidateBarcode(Mat candidate){
-        // resizes candidate image to have at least MIN_COLS columns and MIN_ROWS rows
+    }
+
+    protected Mat scale_candidateBarcode(Mat candidate) {
+    // resizes candidate image to have at least MIN_COLS columns and MIN_ROWS rows
         // called when RESIZE_BEFORE_DECODE is set - seems to help ZXing decode barcode
-        
+
         int MIN_COLS = 200;
         int MIN_ROWS = 200;
-        
+
         int num_rows = candidate.rows();
-        int num_cols = candidate.cols();                        
-        
-        if((num_cols > MIN_COLS) && (num_rows > MIN_ROWS))
+        int num_cols = candidate.cols();
+
+        if ((num_cols > MIN_COLS) && (num_rows > MIN_ROWS))
             return candidate;
-        
-        if(num_cols < MIN_COLS){
-            num_rows = (int) (num_rows * MIN_COLS/(1.0 * num_cols));
-            num_cols= MIN_COLS;
+
+        if (num_cols < MIN_COLS) {
+            num_rows = (int) (num_rows * MIN_COLS / (1.0 * num_cols));
+            num_cols = MIN_COLS;
         }
-        
-        if(num_rows < MIN_ROWS){
-            num_cols = (int) (num_cols * MIN_ROWS/(1.0 * num_rows));
+
+        if (num_rows < MIN_ROWS) {
+            num_cols = (int) (num_cols * MIN_ROWS / (1.0 * num_rows));
             num_rows = MIN_ROWS;
         }
-        
+
         Mat result = Mat.zeros(num_rows, num_cols, candidate.type());
-        
+
         Imgproc.resize(candidate, result, result.size(), 0, 0, Imgproc.INTER_CUBIC);
         return result;
     }
 
     protected void connectComponents() {
-        // connect large components by doing morph close followed by morph open
+    // connect large components by doing morph close followed by morph open
         // use larger element size for erosion to remove small elements joined by dilation
         Mat small_elemSE, large_elemSE;
-        
-        if(searchParams.is_VSmallMatrix){
+
+        if (searchParams.is_VSmallMatrix) {
             // test out slightly different process for small codes in a large image
-        small_elemSE =  Imgproc.getStructuringElement(Imgproc.MORPH_RECT, searchParams.elem_size);
-        large_elemSE = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, searchParams.large_elem_size);
-            
-        Imgproc.dilate(img_details.probabilities, img_details.probabilities, small_elemSE);
-        Imgproc.erode(img_details.probabilities, img_details.probabilities, large_elemSE);
-        
-        Imgproc.erode(img_details.probabilities, img_details.probabilities, small_elemSE);
-        Imgproc.dilate(img_details.probabilities, img_details.probabilities, large_elemSE);        
+            small_elemSE = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, searchParams.elem_size);
+            large_elemSE = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, searchParams.large_elem_size);
+
+            Imgproc.dilate(img_details.probabilities, img_details.probabilities, small_elemSE);
+            Imgproc.erode(img_details.probabilities, img_details.probabilities, large_elemSE);
+
+            Imgproc.erode(img_details.probabilities, img_details.probabilities, small_elemSE);
+            Imgproc.dilate(img_details.probabilities, img_details.probabilities, large_elemSE);
             return;
         }
-        
-        small_elemSE =  Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.elem_size);
+
+        small_elemSE = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.elem_size);
         large_elemSE = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, searchParams.large_elem_size);
-            
+
         Imgproc.dilate(img_details.probabilities, img_details.probabilities, small_elemSE);
         Imgproc.erode(img_details.probabilities, img_details.probabilities, large_elemSE);
-        
+
         Imgproc.erode(img_details.probabilities, img_details.probabilities, small_elemSE);
         Imgproc.dilate(img_details.probabilities, img_details.probabilities, large_elemSE);
     }
-    
-        protected void scaleImage() {
-        // shrink image if it is above a certain size   
-        // it reduces image size for large images which helps with processing speed
-        // and reducing sensitivity to barcode size within the image
-        
-        if(rows > searchParams.MAX_ROWS){
-            cols = (int) (cols * (searchParams.MAX_ROWS * 1.0/rows));
-            rows = searchParams.MAX_ROWS;
-            img_details.src_scaled = new Mat(rows, cols, CvType.CV_32F);
-            Imgproc.resize(img_details.src_original, img_details.src_scaled, img_details.src_scaled.size(), 0, 0, Imgproc.INTER_AREA);
-            
-        }
-    }
 
     protected double calc_rect_sum(Mat integral, int right_col, int left_col, int top_row, int bottom_row) {
-        // calculates sum of values within a rectangle from a given integral image
+    // calculates sum of values within a rectangle from a given integral image
         // if top_row or left_col are -1, it uses 0 for their value
         // this is useful when one part of the rectangle lies outside the image bounds
         // if the right col or bottom row falls outside the image bounds, pass the max col or max row to this method
@@ -261,8 +252,8 @@ public abstract class Barcode {
 
     }
 
-    protected Mat loadImage() throws IOException{
-        // reads the image file in the class variable name
+    protected Mat loadImage() throws IOException {
+    // reads the image file in the class variable name
         // Highgui produces an incomprehensible error message if the filename is incorrect so
         // we do the check ourselves first
         File f = new File(name);

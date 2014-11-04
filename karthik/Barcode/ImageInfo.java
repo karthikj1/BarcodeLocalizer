@@ -29,13 +29,11 @@ class ImageInfo {
     // while processing src_original to search for a barcode
     Mat src_original, src_scaled, src_grayscale, probabilities;
     Mat gradient_direction, gradient_magnitude;
-    Mat adjusted_variance;
     
     Barcode.CodeType searchType;
 
     ImageInfo(Mat src) {
        src_original = src;
-       src_scaled = src_original.clone();
     }       
     
 }

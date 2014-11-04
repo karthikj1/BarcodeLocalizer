@@ -103,7 +103,7 @@ public class SimpleBarcodeTester {
         int frame_count;
         Mat image = new Mat();
 
-        Barcode barcode;
+        Barcode barcode = null;
         Map<CharSequence, BarcodeLocation> foundCodes = new HashMap<>();
 
         try {
@@ -118,18 +118,18 @@ public class SimpleBarcodeTester {
                 video.set(CV_CAP_PROP_POS_FRAMES, i);
                 video.read(image);
                 String imgName = filename + "_Frame_" + i;
-        //    ImageDisplay.showImageFrame(image, imgName);
 
-                barcode = new MatrixBarcode(imgName, image);
+                if (barcode == null)
+                    barcode = new MatrixBarcode(imgName, image, TryHarderFlags.VERY_SMALL_MATRIX);
+                else{
+                    if(!Barcode.updateImage(barcode, image, imgName))
+                        System.out.println("Error updating image");;
+                }
 
-            // set the flags you want to use when searching for the barcode
-                // flag types are described in the enum TryHarderFlags
-                // default is TryHarderFlags.NORMAL
-                barcode.setMultipleFlags(TryHarderFlags.VERY_SMALL_MATRIX);
-            // findBarcode() returns a List<BufferedImage> with all possible candidate barcode regions from
+            // locateBarcode() returns a List<CandidateResult> with all possible candidate barcode regions from
                 // within the image. These images then get passed to a decoder(we use ZXing here but could be any decoder)
 
-                List<CandidateResult> results = barcode.findBarcode();
+                List<CandidateResult> results = barcode.locateBarcode();
 
                 String imgFile = barcode.getName();
                 Map<CharSequence, BarcodeLocation> frame_results = decodeBarcodeFromVideo(results, i);
@@ -159,7 +159,7 @@ public class SimpleBarcodeTester {
         double frames_per_second;
         int frame_count;
         Mat image = new Mat();
-        Barcode barcode;
+        Barcode barcode = null;
         Map<CharSequence, BarcodeLocation> foundCodes = new HashMap<>();
 
         try {
@@ -177,18 +177,17 @@ public class SimpleBarcodeTester {
                 i += 1;
                 video.read(image);
                 String imgName = caption + "_" + System.currentTimeMillis();
-        //    ImageDisplay.showImageFrame(image, imgName);
 
-                barcode = new MatrixBarcode(imgName, image);
-
-            // set the flags you want to use when searching for the barcode
-                // flag types are described in the enum TryHarderFlags
-                // default is TryHarderFlags.NORMAL
-                barcode.setMultipleFlags(TryHarderFlags.VERY_SMALL_MATRIX);
-            // findBarcode() returns a List<BufferedImage> with all possible candidate barcode regions from
+                if (barcode == null)
+                    barcode = new MatrixBarcode(imgName, image, TryHarderFlags.VERY_SMALL_MATRIX);
+                else{
+                    if(!Barcode.updateImage(barcode, image, imgName))
+                        System.out.println("Error updating image");;
+                }
+            // locateBarcode() returns a List<CandidateResult> with all possible candidate barcode regions from
                 // within the image. These images then get passed to a decoder(we use ZXing here but could be any decoder)
 
-                List<CandidateResult> results = barcode.findBarcode();
+                List<CandidateResult> results = barcode.locateBarcode();
 
                 String imgFile = barcode.getName();
                 Map<CharSequence, BarcodeLocation> frame_results = decodeBarcodeFromVideo(results, i);
@@ -240,15 +239,11 @@ public class SimpleBarcodeTester {
         Barcode barcode;
         // instantiate a class of type MatrixBarcode with the image filename
         try {
-            barcode = new MatrixBarcode(imgFile, SHOW_INTERMEDIATE_STEPS);
+            barcode = new MatrixBarcode(imgFile, SHOW_INTERMEDIATE_STEPS, TryHarderFlags.VERY_SMALL_MATRIX);
 
-            // set the flags you want to use when searching for the barcode
-            // flag types are described in the enum TryHarderFlags
-            // default is TryHarderFlags.NORMAL
-            barcode.setMultipleFlags(TryHarderFlags.VERY_SMALL_MATRIX);
-            // findBarcode() returns a List<BufferedImage> with all possible candidate barcode regions from
+            // locateBarcode() returns a List<CandidateResult> with all possible candidate barcode regions from
             // within the image. These images then get passed to a decoder(we use ZXing here but could be any decoder)
-            List<CandidateResult> results = barcode.findBarcode();
+            List<CandidateResult> results = barcode.locateBarcode();
             System.out.println("Decoding " + imgFile + " " + results.size() + " candidate codes found");
 
             String imgFile = barcode.getName();

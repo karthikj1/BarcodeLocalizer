@@ -38,21 +38,22 @@ public class MatrixBarcode extends Barcode {
     private static final Scalar DUMMY_ANGLE_SCALAR = new Scalar(DUMMY_ANGLE);
     private static final Scalar ZERO_SCALAR = new Scalar(0);
 
-    public MatrixBarcode(String filename, boolean debug) throws IOException{
-        super(filename);
+    public MatrixBarcode(String filename, boolean debug, TryHarderFlags flag) throws IOException{
+        super(filename, flag);
         DEBUG_IMAGES = debug;
         img_details.searchType = CodeType.MATRIX;
    }
 
-    public MatrixBarcode(String image_name, Mat img) throws IOException{
-        super(image_name, img);
+    public MatrixBarcode(String image_name, Mat img, TryHarderFlags flag) throws IOException{
+        super(img, flag);
+        name = image_name;
         img_details.searchType = CodeType.MATRIX;
         DEBUG_IMAGES = false;
     }
 
     public List<CandidateResult> locateBarcode() throws IOException{
         
-        preprocess_image();
+//        preprocess_image();
 
         img_details.probabilities = findCandidates();   // find areas with low variance in gradient direction
 
