@@ -125,7 +125,7 @@ public class SimpleBarcodeTester {
             // set the flags you want to use when searching for the barcode
                 // flag types are described in the enum TryHarderFlags
                 // default is TryHarderFlags.NORMAL
-                barcode.setMultipleFlags(TryHarderFlags.VERY_SMALL_MATRIX, TryHarderFlags.POSTPROCESS_RESIZE_BARCODE);
+                barcode.setMultipleFlags(TryHarderFlags.VERY_SMALL_MATRIX);
             // findBarcode() returns a List<BufferedImage> with all possible candidate barcode regions from
                 // within the image. These images then get passed to a decoder(we use ZXing here but could be any decoder)
 
@@ -184,7 +184,7 @@ public class SimpleBarcodeTester {
             // set the flags you want to use when searching for the barcode
                 // flag types are described in the enum TryHarderFlags
                 // default is TryHarderFlags.NORMAL
-                barcode.setMultipleFlags(TryHarderFlags.VERY_SMALL_MATRIX, TryHarderFlags.POSTPROCESS_RESIZE_BARCODE);
+                barcode.setMultipleFlags(TryHarderFlags.VERY_SMALL_MATRIX);
             // findBarcode() returns a List<BufferedImage> with all possible candidate barcode regions from
                 // within the image. These images then get passed to a decoder(we use ZXing here but could be any decoder)
 
@@ -245,7 +245,7 @@ public class SimpleBarcodeTester {
             // set the flags you want to use when searching for the barcode
             // flag types are described in the enum TryHarderFlags
             // default is TryHarderFlags.NORMAL
-            barcode.setMultipleFlags(TryHarderFlags.VERY_SMALL_MATRIX, TryHarderFlags.POSTPROCESS_RESIZE_BARCODE);
+            barcode.setMultipleFlags(TryHarderFlags.VERY_SMALL_MATRIX);
             // findBarcode() returns a List<BufferedImage> with all possible candidate barcode regions from
             // within the image. These images then get passed to a decoder(we use ZXing here but could be any decoder)
             List<CandidateResult> results = barcode.findBarcode();

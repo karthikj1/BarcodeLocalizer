@@ -32,7 +32,7 @@ public enum TryHarderFlags {
     This can sometimes help the reader decode it more easily.
     */
     
-    NORMAL(1), SMALL(2), LARGE(4), VERY_SMALL_LINEAR(8), VERY_SMALL_MATRIX(16), ALL_SIZES(31), ALL_SIZES_BUT_VSMALL(7),  POSTPROCESS_RESIZE_BARCODE(32), ALL(255);
+    NORMAL(1), SMALL(2), LARGE(4), VERY_SMALL_LINEAR(8), VERY_SMALL_MATRIX(16), ALL_SIZES(31), ALL_SIZES_BUT_VSMALL(7), ALL(255);
         
         private int val;
         

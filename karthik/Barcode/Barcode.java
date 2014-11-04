@@ -37,7 +37,8 @@ public abstract class Barcode {
     }
 
     // flag to indicate what kind of searches to perform on image to locate barcode
-    protected int statusFlags = TryHarderFlags.NORMAL.value();
+    protected int sizeFlag = TryHarderFlags.VERY_SMALL_MATRIX.value();
+    protected boolean postProcessResizeBarcode = true;
     protected static double USE_ROTATED_RECT_ANGLE = 361;
 
     protected String name; // filename of barcode image file
@@ -48,7 +49,7 @@ public abstract class Barcode {
     protected ImageInfo img_details;
     protected int rows, cols;
  
-    List<CandidateResult> candidateBarcodes = new ArrayList<>();
+    List<CandidateResult> candidateBarcodes = new ArrayList<CandidateResult>();
 
     static enum CodeType {LINEAR, MATRIX};        
     
@@ -79,59 +80,59 @@ public abstract class Barcode {
 
     public void setOneFlag(TryHarderFlags flag){
         // sets the specified flag to TRUE, other flags are untouched
-        statusFlags = statusFlags | flag.value();
+        sizeFlag = sizeFlag | flag.value();
     }
     
     public void clearFlag(TryHarderFlags flag){
         // sets the specified flag to FALSE, other flags are untouched
-        statusFlags = statusFlags & (~flag.value());
+        sizeFlag = sizeFlag & (~flag.value());
     }
     
     public void resetFlags(){
         // resets status flag to default of searching with NORMAL only
-        statusFlags = TryHarderFlags.NORMAL.value();
+        sizeFlag = TryHarderFlags.NORMAL.value();
     }    
 
     public void setMultipleFlags(TryHarderFlags... flags){
         // clears the flags and sets it to only the ones specified in the argument list
-        statusFlags = 0;
+        sizeFlag = 0;
         
         for (TryHarderFlags flag : flags)
             setOneFlag(flag);
         // at least one of the size flags must be set so it chooses NORMAL as the default if nothing is set
-        if((statusFlags & TryHarderFlags.ALL_SIZES.value()) == 0)
+        if((sizeFlag & TryHarderFlags.ALL_SIZES.value()) == 0)
             setOneFlag(TryHarderFlags.NORMAL);
     }
     
     // actual locateBarcode algo must be implemented in child class
-    protected abstract List<CandidateResult> locateBarcode() throws IOException;
+    public abstract List<CandidateResult> locateBarcode() throws IOException;
     
     public List<CandidateResult> findBarcode() throws IOException{
         /*
-        finds barcodes using searches according to the flags set in statusFlags
+        finds barcodes using searches according to the flags set in sizeFlag
         */
 
-        if ((statusFlags & TryHarderFlags.NORMAL.value()) != 0) {
+        if ((sizeFlag & TryHarderFlags.NORMAL.value()) != 0) {
             searchParams = SearchParameters.getNormalParameters();
             locateBarcode();
         }
         
-        if ((statusFlags & TryHarderFlags.SMALL.value()) != 0) {
+        if ((sizeFlag & TryHarderFlags.SMALL.value()) != 0) {
             searchParams = SearchParameters.getSmallParameters();
             locateBarcode();
         }
         
-        if ((statusFlags & TryHarderFlags.LARGE.value()) != 0) {
+        if ((sizeFlag & TryHarderFlags.LARGE.value()) != 0) {
             searchParams = SearchParameters.getLargeParameters();
             locateBarcode();
         }
 
-        if ((statusFlags & TryHarderFlags.VERY_SMALL_LINEAR.value()) != 0) {
+        if ((sizeFlag & TryHarderFlags.VERY_SMALL_LINEAR.value()) != 0) {
             searchParams = SearchParameters.getVSmall_LinearParameters();
             locateBarcode();
         }
         
-        if ((statusFlags & TryHarderFlags.VERY_SMALL_MATRIX.value()) != 0) {
+        if ((sizeFlag & TryHarderFlags.VERY_SMALL_MATRIX.value()) != 0) {
             searchParams = SearchParameters.getVSmall_MatrixParameters();
             locateBarcode();
         }

@@ -50,7 +50,7 @@ public class MatrixBarcode extends Barcode {
         DEBUG_IMAGES = false;
     }
 
-    protected List<CandidateResult> locateBarcode() throws IOException{
+    public List<CandidateResult> locateBarcode() throws IOException{
         
         preprocess_image();
 
@@ -98,7 +98,7 @@ public class MatrixBarcode extends Barcode {
 
                 // rotates candidate region to straighten it based on the angle of the enclosing RotatedRect                
                 ROI = cb.NormalizeCandidateRegion(Barcode.USE_ROTATED_RECT_ANGLE);  
-                if((statusFlags & TryHarderFlags.POSTPROCESS_RESIZE_BARCODE.value()) != 0)
+                if(postProcessResizeBarcode)
                     ROI.ROI = scale_candidateBarcode(ROI.ROI);               
                 
                 ROI.candidate = ImageDisplay.getBufImg(ROI.ROI);
@@ -158,7 +158,7 @@ public class MatrixBarcode extends Barcode {
         if (DEBUG_IMAGES)
             write_Mat("probabilities_raw.csv", probabilities);
      
-        Core.normalize(probabilities, probabilities, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);        
+//        Core.normalize(probabilities, probabilities, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);        
 //        double debug_prob_thresh = Imgproc.threshold(probabilities, probabilities, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
         
       //  probabilities.convertTo(probabilities, CvType.CV_8U, 255);  // scale raw probabilities to be from 0 - 255
