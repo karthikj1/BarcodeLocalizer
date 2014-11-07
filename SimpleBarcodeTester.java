@@ -37,10 +37,13 @@ import org.opencv.highgui.VideoCapture;
 public class SimpleBarcodeTester {
 
     private static String fileSeparator = System.getProperty("file.separator");
+    private static String lineSeparator = System.getProperty("line.separator");
 
     private static boolean IS_VIDEO = false;
     private static boolean IS_CAMERA = false;
     private static boolean SHOW_INTERMEDIATE_STEPS = false;
+    private static boolean showImages = true;
+    
     private static String imgFile;
     private static VideoCapture video;
     private static int CV_CAP_PROP_FPS = 5;
@@ -83,15 +86,18 @@ public class SimpleBarcodeTester {
         Mat image = new Mat();
         for (CharSequence result : results.keySet()) {
             BarcodeLocation resultLoc = results.get(result);
-            System.out.println("Found " + result + " " + resultLoc.toString());
-            video.set(CV_CAP_PROP_POS_FRAMES, resultLoc.frame);
-            video.read(image);
-            Point[] rectPoints = resultLoc.coords;
-            Scalar colour = new Scalar(0, 0, 255);
-            for (int j = 0; j < 3; j++)
-                Core.line(image, rectPoints[j], rectPoints[j + 1], colour, 2, Core.LINE_AA, 0);
-            Core.line(image, rectPoints[3], rectPoints[0], colour, 2, Core.LINE_AA, 0);
-            ImageDisplay.showImageFrame(image, "Barcode text - " + result);
+            System.out.print("Found " + result + " Location - " + resultLoc.toString());
+            System.out.print(lineSeparator + lineSeparator);
+            if (showImages) {
+                video.set(CV_CAP_PROP_POS_FRAMES, resultLoc.frame);
+                video.read(image);
+                Point[] rectPoints = resultLoc.coords;
+                Scalar colour = new Scalar(0, 0, 255);
+                for (int j = 0; j < 3; j++)
+                    Core.line(image, rectPoints[j], rectPoints[j + 1], colour, 2, Core.LINE_AA, 0);
+                Core.line(image, rectPoints[3], rectPoints[0], colour, 2, Core.LINE_AA, 0);
+                ImageDisplay.showImageFrame(image, "Barcode text - " + result);
+            }
         }
         if(IS_CAMERA)
             video.release();
@@ -104,6 +110,7 @@ public class SimpleBarcodeTester {
         Mat image = new Mat();
 
         Barcode barcode = null;
+        ImageDisplay videoDisp = null;
         Map<CharSequence, BarcodeLocation> foundCodes = new HashMap<>();
 
         try {
@@ -113,7 +120,8 @@ public class SimpleBarcodeTester {
             System.out.println("FPS is " + frames_per_second);
             System.out.println("Frame count is " + frame_count);
             video.read(image);
-            ImageDisplay videoDisp = ImageDisplay.getImageFrame(image, "Video Frames");
+            if(showImages)
+                videoDisp = ImageDisplay.getImageFrame(image, "Video Frames");
             for (int i = 0; i < frame_count; i += (frames_per_second / 3.0)) {
                 video.set(CV_CAP_PROP_POS_FRAMES, i);
                 video.read(image);
@@ -134,7 +142,7 @@ public class SimpleBarcodeTester {
                 String imgFile = barcode.getName();
                 Map<CharSequence, BarcodeLocation> frame_results = decodeBarcodeFromVideo(results, i);
                 foundCodes.putAll(frame_results);
-                System.out.println("Processed frame " + i + "- Found " + frame_results.size() + " results");
+                System.out.print("Processed frame " + i + "- Found " + frame_results.size() + " results\r");
 
                 for (BarcodeLocation bl : frame_results.values()) {
                     Point[] rectPoints = bl.coords;
@@ -143,10 +151,12 @@ public class SimpleBarcodeTester {
                         Core.line(image, rectPoints[j], rectPoints[j + 1], colour, 2, Core.LINE_AA, 0);
                     Core.line(image, rectPoints[3], rectPoints[0], colour, 2, Core.LINE_AA, 0);
                 }
-                videoDisp.updateImage(image, "Video frame " + i);
+                if(showImages)
+                    videoDisp.updateImage(image, "Video frame " + i);
 
             }            
-            videoDisp.close();
+            if(showImages)  
+                videoDisp.close();
         } catch (IOException ioe) {
             System.out.println("IO Exception when finding barcode " + ioe.getMessage());
         }
@@ -278,9 +288,11 @@ public class SimpleBarcodeTester {
             }
             if (decodedBarcode == null) {
                 title = filename + " - no barcode found - " + cr.getROI_coords();
-                ImageDisplay.showImageFrame(candidate, title);
+                if(showImages)
+                    ImageDisplay.showImageFrame(candidate, title);
             } else {
-                ImageDisplay.showImageFrame(decodedBarcode, title);
+                if(showImages)
+                    ImageDisplay.showImageFrame(decodedBarcode, title);
                 System.out.println("Barcode text for " + filename + " is " + result.getText());
             }
         }
@@ -296,6 +308,7 @@ public class SimpleBarcodeTester {
         System.out.println("[-debug] - shows images for intermediate steps and saves intermediate files");
         System.out.println("[-video] - <imagefile> is a video");
         System.out.println("[-camera] - capture from camera");
+        System.out.println("[-noimages] - do not display any images, overrides -debug command");
         System.out.println("");
     }
 
@@ -318,6 +331,12 @@ public class SimpleBarcodeTester {
 
             if (arg.equalsIgnoreCase("-camera")) {
                 IS_CAMERA = true;
+                continue;
+            }
+
+            if (arg.equalsIgnoreCase("-noimages")) {
+                showImages = false;
+                SHOW_INTERMEDIATE_STEPS = false;
                 continue;
             }
 // must be filename if we got here
