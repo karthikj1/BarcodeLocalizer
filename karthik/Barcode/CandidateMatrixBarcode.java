@@ -17,9 +17,7 @@
 
 package karthik.Barcode;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.utils.Converters;
@@ -30,6 +28,8 @@ import org.opencv.utils.Converters;
  */
 public class CandidateMatrixBarcode extends CandidateBarcode{
 
+    private static Scalar ZERO_SCALAR = new Scalar(0);
+    
     CandidateMatrixBarcode(ImageInfo img_details, RotatedRect minRect, SearchParameters params) {
         super(img_details, minRect, params);
         
@@ -52,22 +52,19 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
          // Some parts of this function are from http://felix.abecassis.me/2011/10/opencv-rotation-deskewing/
          // and http://stackoverflow.com/questions/22041699/rotate-an-image-without-cropping-in-opencv-in-c
          */
-        Mat rotation_matrix, enlarged;
+//        Mat rotation_matrix, enlarged;
+        
         double rotation_angle;
         CandidateResult result = new CandidateResult();
 
         int orig_rows = img_details.src_original.rows();
         int orig_cols = img_details.src_original.cols();
-        int diagonal = (int) Math.sqrt(orig_rows * orig_rows + orig_cols * orig_cols);
 
-        int newWidth = diagonal;
-        int newHeight = diagonal;
+        int offsetX = img_details.offsetX;
+        int offsetY = img_details.offsetY;
+        img_details.enlarged.setTo(ZERO_SCALAR);
 
-        int offsetX = (newWidth - orig_cols) / 2;
-        int offsetY = (newHeight - orig_rows) / 2;
-        enlarged = new Mat(newWidth, newHeight, img_details.src_original.type());
-
-        img_details.src_original.copyTo(enlarged.rowRange(offsetY, offsetY + orig_rows).colRange(offsetX,
+        img_details.src_original.copyTo(img_details.enlarged.rowRange(offsetY, offsetY + orig_rows).colRange(offsetX,
             offsetX + orig_cols));
         // scale candidate region back up to original size to return cropped part from *original* image 
         // need the 1.0 there to force floating-point arithmetic from int values
@@ -78,7 +75,7 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
           candidateRegion.size.height += 2 * params.RECT_HEIGHT;
 
         // calculate location of rectangle in original image and its corner points
-          RotatedRect scaledRegion = new RotatedRect(candidateRegion.center, candidateRegion.size, candidateRegion.angle);
+        RotatedRect scaledRegion = new RotatedRect(candidateRegion.center, candidateRegion.size, candidateRegion.angle);
         scaledRegion.center.x = scaledRegion.center.x * scale_factor + offsetX;
         scaledRegion.center.y = scaledRegion.center.y * scale_factor + offsetY;
         scaledRegion.size.height *= scale_factor;
@@ -97,58 +94,46 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
         else
             rotation_angle = angle;
 
-        Point centre = new Point(enlarged.rows() / 2.0, enlarged.cols() / 2.0);
-        rotation_matrix = Imgproc.getRotationMatrix2D(centre, rotation_angle, 1.0);
+        img_details.rotation_matrix = Imgproc.getRotationMatrix2D(img_details.enlarged_centre, rotation_angle, 1.0);
 
         // perform the affine transformation
-        rotation_matrix.convertTo(rotation_matrix, CvType.CV_32F); // convert type so matrix multip. works properly
-        List<Point> newCornerPoints = new ArrayList<Point>();
-        Mat newCornerCoord = Mat.zeros(2, 1, CvType.CV_32F);
-        Mat coord = Mat.ones(3, 1, CvType.CV_32F);
+        img_details.rotation_matrix.convertTo(img_details.rotation_matrix, CvType.CV_32F); // convert type so matrix multip. works properly
+        
+        img_details.newCornerPoints.clear();
+        img_details.newCornerCoord.setTo(ZERO_SCALAR);
         // calculate the new location for each corner point of the rectangle ROI
         for (Point p : scaledCorners) {
-            coord.put(0, 0, p.x);
-            coord.put(1, 0, p.y);
-            Core.gemm(rotation_matrix, coord, 1, Mat.zeros(3, 3, CvType.CV_32F), 0, newCornerCoord);
-            newCornerPoints.add(new Point(newCornerCoord.get(0, 0)[0], newCornerCoord.get(1, 0)[0]));
+            img_details.coord.put(0, 0, p.x);
+            img_details.coord.put(1, 0, p.y);
+            Core.gemm(img_details.rotation_matrix, img_details.coord, 1, img_details.delta, 0, img_details.newCornerCoord);
+            img_details.newCornerPoints.add(new Point(img_details.newCornerCoord.get(0, 0)[0], img_details.newCornerCoord.get(1, 0)[0]));
         }
-        Mat rotated = Mat.zeros(enlarged.size(), enlarged.type());
-        Imgproc.warpAffine(enlarged, rotated, rotation_matrix, enlarged.size(), Imgproc.INTER_CUBIC);
-
-        Point rectPoints[] = newCornerPoints.toArray(new Point[4]);
+        img_details.rotated.setTo(ZERO_SCALAR);
+        Imgproc.warpAffine(img_details.enlarged, img_details.rotated, img_details.rotation_matrix, img_details.enlarged.size(), Imgproc.INTER_CUBIC);
 
         // sort rectangles points in order by first sorting all 4 points based on x
         // we then sort the first two based on y and then the next two based on y
         // this leaves the array in order top-left, bottom-left, top-right, bottom-right
-        Arrays.sort(rectPoints, new CandidateBarcode.compare_x());
-        if (rectPoints[0].y > rectPoints[1].y) {
-            Point temp = rectPoints[1];
-            rectPoints[1] = rectPoints[0];
-            rectPoints[0] = temp;
-        }
-
-        if (rectPoints[2].y > rectPoints[3].y) {
-            Point temp = rectPoints[2];
-            rectPoints[2] = rectPoints[3];
-            rectPoints[3] = temp;
-        }
-
-        newCornerPoints = Arrays.asList(rectPoints);
+        Collections.sort(img_details.newCornerPoints, CandidateBarcode.get_x_comparator());
+        Collections.sort(img_details.newCornerPoints.subList(0, 2), CandidateBarcode.get_y_comparator());
+        Collections.sort(img_details.newCornerPoints.subList(2, 4), CandidateBarcode.get_y_comparator());
+        
         // calc height and width of rectangular region
-        double height, width;
-        height = length(rectPoints[1].x, rectPoints[1].y, rectPoints[0].x, rectPoints[0].y);
-        width = length(rectPoints[2].x, rectPoints[2].y, rectPoints[0].x, rectPoints[0].y);
-        // create destination points for warpPerspective to map to
-        List<Point> transformedPoints = new ArrayList<Point>();
-        transformedPoints.add(new Point(0, 0));
-        transformedPoints.add(new Point(0, height));
-        transformedPoints.add(new Point(width, 0));
-        transformedPoints.add(new Point(width, height));
 
-        Mat perspectiveTransform = Imgproc.getPerspectiveTransform(Converters.vector_Point2f_to_Mat(newCornerPoints),
-            Converters.vector_Point2f_to_Mat(transformedPoints));
+        double height = length(img_details.newCornerPoints.get(1), img_details.newCornerPoints.get(0));
+        double width = length(img_details.newCornerPoints.get(2), img_details.newCornerPoints.get(0));
+        
+        // create destination points for warpPerspective to map to
+        img_details.transformedPoints.clear();
+        img_details.transformedPoints.add(new Point(0, 0));
+        img_details.transformedPoints.add(new Point(0, height));
+        img_details.transformedPoints.add(new Point(width, 0));
+        img_details.transformedPoints.add(new Point(width, height));
+
+        Mat perspectiveTransform = Imgproc.getPerspectiveTransform(Converters.vector_Point2f_to_Mat(img_details.newCornerPoints),
+            Converters.vector_Point2f_to_Mat(img_details.transformedPoints));
         Mat perspectiveOut = Mat.zeros((int) height + 2, (int) width + 2, CvType.CV_32F);
-        Imgproc.warpPerspective(rotated, perspectiveOut, perspectiveTransform, perspectiveOut.size(),
+        Imgproc.warpPerspective(img_details.rotated, perspectiveOut, perspectiveTransform, perspectiveOut.size(),
             Imgproc.INTER_CUBIC);
 
         result.ROI = perspectiveOut;

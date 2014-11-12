@@ -30,7 +30,9 @@ class CandidateBarcode {
     protected int num_blanks;
     protected SearchParameters params;
     protected int threshold;  // threshold for number of blanks around barcode
-
+    private static Compare_x x_comparator = null;
+    private static Compare_y y_comparator = null;
+    
     protected CandidateBarcode(ImageInfo img_details, RotatedRect minRect, SearchParameters params) {
         this.img_details = img_details;
         this.candidateRegion = minRect;
@@ -67,19 +69,47 @@ class CandidateBarcode {
         return rotation_angle;
     }
 
-    protected double length(double x1, double y1, double x2, double y2) {
+    protected double length(Point p1, Point p2) {
         // returns length of line segment between (x1, y1) and (x2, y2)
 
-        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
     }
 
-    protected class compare_x implements Comparator<Point> {
+    protected static Compare_x get_x_comparator(){
+        // factory method to return one instance of a Compare_x object
+        if (x_comparator == null){
+            x_comparator = new Compare_x();            
+        }
+        return x_comparator;
+    }
+    
+    protected static Compare_y get_y_comparator(){
+        // factory method to return one instance of a Compare_x object
+        if (y_comparator == null){
+            y_comparator = new Compare_y();            
+        }
+        return y_comparator;
+    }
+
+    protected static class Compare_x implements Comparator<Point> {
 
         // Comparator class to compare x coordinate of Point objects
         public int compare(Point a, Point b) {
             if (a.x == b.x)
                 return 0;
             if (a.x > b.x)
+                return 1;
+            return -1;
+        }
+    }
+
+    protected static class Compare_y implements Comparator<Point> {
+
+        // Comparator class to compare x coordinate of Point objects
+        public int compare(Point a, Point b) {
+            if (a.y == b.y)
+                return 0;
+            if (a.y > b.y)
                 return 1;
             return -1;
         }

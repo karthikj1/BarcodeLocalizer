@@ -131,7 +131,7 @@ public class SimpleBarcodeTester {
                     barcode = new MatrixBarcode(imgName, image, TryHarderFlags.VERY_SMALL_MATRIX);
                 else{
                     if(!Barcode.updateImage(barcode, image, imgName))
-                        System.out.println("Error updating image");;
+                        barcode = new MatrixBarcode(imgName, image, TryHarderFlags.VERY_SMALL_MATRIX);
                 }
 
             // locateBarcode() returns a List<CandidateResult> with all possible candidate barcode regions from
@@ -192,7 +192,7 @@ public class SimpleBarcodeTester {
                     barcode = new MatrixBarcode(imgName, image, TryHarderFlags.VERY_SMALL_MATRIX);
                 else{
                     if(!Barcode.updateImage(barcode, image, imgName))
-                        System.out.println("Error updating image");;
+                        barcode = new MatrixBarcode(imgName, image, TryHarderFlags.VERY_SMALL_MATRIX);
                 }
             // locateBarcode() returns a List<CandidateResult> with all possible candidate barcode regions from
                 // within the image. These images then get passed to a decoder(we use ZXing here but could be any decoder)
