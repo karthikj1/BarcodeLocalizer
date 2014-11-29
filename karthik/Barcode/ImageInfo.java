@@ -39,17 +39,15 @@ class ImageInfo {
     Mat mask;
     
     // matrices used in CandidateMatrixBarcode class
-    Mat rotation_matrix, enlarged, rotated;
+    Mat rotation_matrix;
     Mat delta = Mat.zeros(3, 3, CvType.CV_32F);
     Mat newCornerCoord = Mat.zeros(2, 1, CvType.CV_32F);
-    Mat coord = Mat.ones(3, 1, CvType.CV_32F);
-    Point enlarged_centre;
+    Mat coord = Mat.ones(3, 1, CvType.CV_32F);    
     
     List<Point> newCornerPoints = new ArrayList<Point>(4);
     List<Point> transformedPoints = new ArrayList<Point>(4);
         
-    int offsetX, offsetY;
-    
+    Point[] scaledCorners = new Point[4];
 
     ImageInfo(Mat src) {
        src_original = src;
@@ -59,22 +57,12 @@ class ImageInfo {
        scharr_x = new Mat();
        scharr_y = new Mat();
        mask = new Mat();
-    
-       // create matrices for CandidateMatrixBarcode class
-        int orig_rows = src_original.rows();
-        int orig_cols = src_original.cols();
-        int diagonal = (int) Math.sqrt(orig_rows * orig_rows + orig_cols * orig_cols);
-
-        int newWidth = diagonal + 1;
-        int newHeight = diagonal + 1;
-
-        offsetX = (newWidth - orig_cols) / 2;
-        offsetY = (newHeight - orig_rows) / 2;
-        enlarged = new Mat(newWidth, newHeight, src_original.type());
-        rotated = Mat.zeros(enlarged.size(), enlarged.type());
-
-        enlarged_centre = new Point(enlarged.rows() / 2.0, enlarged.cols() / 2.0);
-
+       
+       // create List of Point's for CandidateMatrixBarcode
+       for(int r = 0; r < 4; r++){
+           newCornerPoints.add(new Point());
+           transformedPoints.add(new Point());
+       }
     }       
     
 }

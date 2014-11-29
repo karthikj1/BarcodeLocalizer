@@ -17,6 +17,7 @@
 
 package karthik.Barcode;
 
+import java.util.Arrays;
 import java.util.Collections;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
@@ -28,7 +29,7 @@ import org.opencv.utils.Converters;
  */
 public class CandidateMatrixBarcode extends CandidateBarcode{
 
-    private static Scalar ZERO_SCALAR = new Scalar(0);
+    private static final Scalar ZERO_SCALAR = new Scalar(0);
     
     CandidateMatrixBarcode(ImageInfo img_details, RotatedRect minRect, SearchParameters params) {
         super(img_details, minRect, params);
@@ -52,65 +53,93 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
          // Some parts of this function are from http://felix.abecassis.me/2011/10/opencv-rotation-deskewing/
          // and http://stackoverflow.com/questions/22041699/rotate-an-image-without-cropping-in-opencv-in-c
          */
-//        Mat rotation_matrix, enlarged;
         
         double rotation_angle;
         CandidateResult result = new CandidateResult();
 
-        int orig_rows = img_details.src_original.rows();
-        int orig_cols = img_details.src_original.cols();
-
-        int offsetX = img_details.offsetX;
-        int offsetY = img_details.offsetY;
-        img_details.enlarged.setTo(ZERO_SCALAR);
-
-        img_details.src_original.copyTo(img_details.enlarged.rowRange(offsetY, offsetY + orig_rows).colRange(offsetX,
-            offsetX + orig_cols));
         // scale candidate region back up to original size to return cropped part from *original* image 
         // need the 1.0 there to force floating-point arithmetic from int values
-        double scale_factor = orig_rows / (1.0 * img_details.src_grayscale.rows());        
+        double scale_factor = img_details.src_original.rows() / (1.0 * img_details.src_grayscale.rows());        
          
         // expand the region found - this helps capture the entire code including the border zone
-          candidateRegion.size.width +=  2 * params.RECT_WIDTH;
-          candidateRegion.size.height += 2 * params.RECT_HEIGHT;
+        candidateRegion.size.width +=  2 * params.RECT_WIDTH;
+        candidateRegion.size.height += 2 * params.RECT_HEIGHT;
 
         // calculate location of rectangle in original image and its corner points
         RotatedRect scaledRegion = new RotatedRect(candidateRegion.center, candidateRegion.size, candidateRegion.angle);
-        scaledRegion.center.x = scaledRegion.center.x * scale_factor + offsetX;
-        scaledRegion.center.y = scaledRegion.center.y * scale_factor + offsetY;
+        scaledRegion.center.x = scaledRegion.center.x * scale_factor;
+        scaledRegion.center.y = scaledRegion.center.y * scale_factor;
         scaledRegion.size.height *= scale_factor;
         scaledRegion.size.width *= scale_factor;
-        Point[] scaledCorners = new Point[4];
-        scaledRegion.points(scaledCorners);
-        // scaledCorners contains the coordinates of the candidate region in the Mat enlarged
-        // lets get the coordinates of the ROI in the original image and save it
-        result.ROI_coords = new Point[4];
-        for (int r = 0; r < 4; r ++){
-            result.ROI_coords[r] = new Point(scaledCorners[r].x - offsetX, scaledCorners[r].y - offsetY);
-        }
         
+        scaledRegion.points(img_details.scaledCorners);
+        // lets get the coordinates of the ROI in the original image and save it
+        
+        result.ROI_coords = Arrays.copyOf(img_details.scaledCorners, 4);
+        
+        // get the bounding rectangle of the ROI by sorting its corner points
+        // we do it manually because RotatedRect can generate corner points outside the Mat area
+        Arrays.sort(img_details.scaledCorners, CandidateBarcode.get_x_comparator());
+        int leftCol = (int) img_details.scaledCorners[0].x;
+        int rightCol = (int) img_details.scaledCorners[3].x;
+        leftCol = (leftCol < 0) ? 0 : leftCol;
+        rightCol = (rightCol > img_details.src_original.cols() - 1) ? img_details.src_original.cols() - 1 : rightCol;
+        
+        Arrays.sort(img_details.scaledCorners, CandidateBarcode.get_y_comparator());
+        int topRow = (int) img_details.scaledCorners[0].y;
+        int bottomRow = (int) img_details.scaledCorners[3].y;        
+        topRow = (topRow < 0) ? 0 : topRow;
+        bottomRow = (bottomRow > img_details.src_original.rows() - 1) ? img_details.src_original.rows() - 1 : bottomRow;
+        
+        Mat ROI_region = img_details.src_original.submat(topRow, bottomRow, leftCol, rightCol);
+        
+        // create a container that is a square with side = diagonal of ROI.
+        // this is large enough to accommodate the ROI region with rotation without cropping it
+        
+        int orig_rows = bottomRow - topRow;
+        int orig_cols = rightCol - leftCol;
+        int diagonal = (int) Math.sqrt(orig_rows * orig_rows + orig_cols * orig_cols);
+
+        int newWidth = diagonal + 1;
+        int newHeight = diagonal + 1;
+
+        int offsetX = (newWidth - orig_cols) / 2;
+        int offsetY = (newHeight - orig_rows) / 2;
+
+        Mat enlarged_ROI_container = new Mat(newWidth, newHeight, img_details.src_original.type());
+        enlarged_ROI_container.setTo(ZERO_SCALAR);
+        
+        // copy ROI to centre of container and rotate it
+        ROI_region.copyTo(enlarged_ROI_container.rowRange(offsetY, offsetY + orig_rows).colRange(offsetX,
+            offsetX + orig_cols));        
+        Point enlarged_ROI_container_centre = new Point(enlarged_ROI_container.rows()/2.0, enlarged_ROI_container.cols()/2.0);
+        Mat rotated = Mat.zeros(enlarged_ROI_container.size(), enlarged_ROI_container.type());
+
         if (angle == Barcode.USE_ROTATED_RECT_ANGLE)
             rotation_angle = estimate_barcode_orientation();
         else
             rotation_angle = angle;
 
-        img_details.rotation_matrix = Imgproc.getRotationMatrix2D(img_details.enlarged_centre, rotation_angle, 1.0);
-
         // perform the affine transformation
+        img_details.rotation_matrix = Imgproc.getRotationMatrix2D(enlarged_ROI_container_centre, rotation_angle, 1.0);
         img_details.rotation_matrix.convertTo(img_details.rotation_matrix, CvType.CV_32F); // convert type so matrix multip. works properly
         
-        img_details.newCornerPoints.clear();
         img_details.newCornerCoord.setTo(ZERO_SCALAR);
-        // calculate the new location for each corner point of the rectangle ROI
-        for (Point p : scaledCorners) {
-            img_details.coord.put(0, 0, p.x);
-            img_details.coord.put(1, 0, p.y);
+        
+        // convert scaledCorners to contain locations of corners in enlarged_ROI_container Mat
+        img_details.scaledCorners[0] = new Point(offsetX, offsetY);
+        img_details.scaledCorners[1] = new Point(offsetX, offsetY + orig_rows);
+        img_details.scaledCorners[2] = new Point(offsetX + orig_cols, offsetY);
+        img_details.scaledCorners[3] = new Point(offsetX + orig_cols, offsetY + orig_rows);
+        // calculate the new location for each corner point of the rectangle ROI after rotation
+        for (int r = 0; r < 4; r++) {
+            img_details.coord.put(0, 0, img_details.scaledCorners[r].x);
+            img_details.coord.put(1, 0, img_details.scaledCorners[r].y);
             Core.gemm(img_details.rotation_matrix, img_details.coord, 1, img_details.delta, 0, img_details.newCornerCoord);
-            img_details.newCornerPoints.add(new Point(img_details.newCornerCoord.get(0, 0)[0], img_details.newCornerCoord.get(1, 0)[0]));
+            updatePoint(img_details.newCornerPoints.get(r), img_details.newCornerCoord.get(0, 0)[0], img_details.newCornerCoord.get(1, 0)[0]);
         }
-        img_details.rotated.setTo(ZERO_SCALAR);
-        Imgproc.warpAffine(img_details.enlarged, img_details.rotated, img_details.rotation_matrix, img_details.enlarged.size(), Imgproc.INTER_CUBIC);
-
+        rotated.setTo(ZERO_SCALAR);
+        Imgproc.warpAffine(enlarged_ROI_container, rotated, img_details.rotation_matrix, enlarged_ROI_container.size(), Imgproc.INTER_CUBIC);
         // sort rectangles points in order by first sorting all 4 points based on x
         // we then sort the first two based on y and then the next two based on y
         // this leaves the array in order top-left, bottom-left, top-right, bottom-right
@@ -124,20 +153,23 @@ public class CandidateMatrixBarcode extends CandidateBarcode{
         double width = length(img_details.newCornerPoints.get(2), img_details.newCornerPoints.get(0));
         
         // create destination points for warpPerspective to map to
-        img_details.transformedPoints.clear();
-        img_details.transformedPoints.add(new Point(0, 0));
-        img_details.transformedPoints.add(new Point(0, height));
-        img_details.transformedPoints.add(new Point(width, 0));
-        img_details.transformedPoints.add(new Point(width, height));
+        updatePoint(img_details.transformedPoints.get(0), 0, 0);
+        updatePoint(img_details.transformedPoints.get(1), 0, height);
+        updatePoint(img_details.transformedPoints.get(2), width, 0);
+        updatePoint(img_details.transformedPoints.get(3), width, height);
 
         Mat perspectiveTransform = Imgproc.getPerspectiveTransform(Converters.vector_Point2f_to_Mat(img_details.newCornerPoints),
             Converters.vector_Point2f_to_Mat(img_details.transformedPoints));
         Mat perspectiveOut = Mat.zeros((int) height + 2, (int) width + 2, CvType.CV_32F);
-        Imgproc.warpPerspective(img_details.rotated, perspectiveOut, perspectiveTransform, perspectiveOut.size(),
+        Imgproc.warpPerspective(rotated, perspectiveOut, perspectiveTransform, perspectiveOut.size(),
             Imgproc.INTER_CUBIC);
 
         result.ROI = perspectiveOut;
-        
         return result;
+    }
+    
+    private static void updatePoint(Point p, double newX, double newY){
+        p.x = newX;
+        p.y = newY;
     }
 }
