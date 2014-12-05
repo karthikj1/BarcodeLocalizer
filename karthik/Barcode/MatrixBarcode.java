@@ -33,8 +33,13 @@ public class MatrixBarcode extends Barcode {
     private static final int DUMMY_ANGLE = 255;
     private static final int BIN_WIDTH = 15;  // bin width for histogram    
     private static final int bins = 180 / BIN_WIDTH;
+    
     private static final Scalar DUMMY_ANGLE_SCALAR = new Scalar(DUMMY_ANGLE);
     private static final Scalar ZERO_SCALAR = new Scalar(0);
+    private static final Scalar SCALAR_170 = new Scalar(170);
+    private static final Scalar SCALAR_180 = new Scalar(180);
+    private static final Scalar SCALAR_NEGATIVE_180 = new Scalar(-180);
+    private static final Scalar SCALAR_360 = new Scalar(360);
 
     private static final MatOfInt mHistSize = new MatOfInt(bins);
     private static final MatOfFloat mRanges = new MatOfFloat(0, 179);
@@ -125,10 +130,10 @@ public class MatrixBarcode extends Barcode {
         Core.phase(img_details.scharr_x, img_details.scharr_y, img_details.gradient_direction, true);
 
         // convert angles from 180-360 to 0-180 range and set angles from 170-180 to 0
-        Core.inRange(img_details.gradient_direction, new Scalar(180), new Scalar(360), img_details.mask);
-        Core.add(img_details.gradient_direction, new Scalar(-180), img_details.gradient_direction, img_details.mask);
-        Core.inRange(img_details.gradient_direction, new Scalar(170), new Scalar(180), img_details.mask);
-        img_details.gradient_direction.setTo(new Scalar(0), img_details.mask);
+        Core.inRange(img_details.gradient_direction, SCALAR_180, SCALAR_360, img_details.mask);
+        Core.add(img_details.gradient_direction, SCALAR_NEGATIVE_180, img_details.gradient_direction, img_details.mask);
+        Core.inRange(img_details.gradient_direction, SCALAR_170, SCALAR_180, img_details.mask);
+        img_details.gradient_direction.setTo(ZERO_SCALAR, img_details.mask);
         
         // convert type after modifying angle so that angles above 360 don't get truncated
         img_details.gradient_direction.convertTo(img_details.gradient_direction, CvType.CV_8U);
@@ -147,10 +152,6 @@ public class MatrixBarcode extends Barcode {
         if (DEBUG_IMAGES)
             write_Mat("probabilities_raw.csv", probabilities);
      
-//        Core.normalize(probabilities, probabilities, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);        
-//        double debug_prob_thresh = Imgproc.threshold(probabilities, probabilities, 0, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
-        
-      //  probabilities.convertTo(probabilities, CvType.CV_8U, 255);  // scale raw probabilities to be from 0 - 255
         double debug_prob_thresh = Imgproc.threshold(probabilities, probabilities, 128, 255, Imgproc.THRESH_BINARY);
         
         if (DEBUG_IMAGES){
