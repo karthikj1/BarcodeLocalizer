@@ -31,8 +31,6 @@ public class MatrixBarcode extends Barcode {
 
     // used in histogram calculation
     private static final int DUMMY_ANGLE = 255;
-    private static final int BIN_WIDTH = 15;  // bin width for histogram    
-    private static final int bins = 180 / BIN_WIDTH;
     
     private static final Scalar DUMMY_ANGLE_SCALAR = new Scalar(DUMMY_ANGLE);
     private static final Scalar ZERO_SCALAR = new Scalar(0);
@@ -41,10 +39,10 @@ public class MatrixBarcode extends Barcode {
     private static final Scalar SCALAR_NEGATIVE_180 = new Scalar(-180);
     private static final Scalar SCALAR_360 = new Scalar(360);
 
-    private static final MatOfInt mHistSize = new MatOfInt(bins);
+    private static final MatOfInt mHistSize = new MatOfInt(ImageInfo.bins);
     private static final MatOfFloat mRanges = new MatOfFloat(0, 179);
     private static final MatOfInt mChannels = new MatOfInt(0);
-    private static MatOfInt hist = new MatOfInt();
+    private static MatOfInt hist = new MatOfInt(ImageInfo.bins, 1);
     private static Mat histIdx = new Mat();
     private static final Mat histMask = new Mat(); // empty Mat to use as mask for histogram calculation
     
@@ -66,8 +64,7 @@ public class MatrixBarcode extends Barcode {
     public List<CandidateResult> locateBarcode() throws IOException{
         
         calcGradientDirectionAndMagnitude();
-        int tileSize = searchParams.tileSize;
-//        for(int tileSize = searchParams.tileSize; tileSize < (rows/2) && tileSize < (cols/2); tileSize *= 2){            
+        for(int tileSize = searchParams.tileSize; tileSize < rows && tileSize < cols; tileSize *= 2){            
             img_details.probabilities = calcProbabilityMatrix(tileSize);   // find areas with low variance in gradient direction
 
         //    connectComponents();
@@ -118,7 +115,7 @@ public class MatrixBarcode extends Barcode {
             }
             if (DEBUG_IMAGES)
                 ImageDisplay.showImageFrameGrid(img_details.src_scaled, name + " with candidate regions");
-  //          }
+        }
         return candidateBarcodes;
     }
 
@@ -130,7 +127,7 @@ public class MatrixBarcode extends Barcode {
         Imgproc.Scharr(img_details.src_grayscale, img_details.scharr_x, CvType.CV_32F, 1, 0);
         Imgproc.Scharr(img_details.src_grayscale, img_details.scharr_y, CvType.CV_32F, 0, 1);
 
-        // calc angle using Core.phase function - should be quicker than using atan2 manually
+        // calc angle using Core.phase function - quicker than using atan2 manually
         Core.phase(img_details.scharr_x, img_details.scharr_y, img_details.gradient_direction, true);
 
         // convert angles from 180-360 to 0-180 range and set angles from 170-180 to 0
@@ -141,9 +138,7 @@ public class MatrixBarcode extends Barcode {
         
         // convert type after modifying angle so that angles above 360 don't get truncated
         img_details.gradient_direction.convertTo(img_details.gradient_direction, CvType.CV_8U);
-        if(DEBUG_IMAGES){
-            write_Mat("angles.csv", img_details.gradient_direction);
-        }
+
         // calculate magnitude of gradient, normalize and threshold
         Core.magnitude(img_details.scharr_x, img_details.scharr_y, img_details.gradient_magnitude);
         Core.normalize(img_details.gradient_magnitude, img_details.gradient_magnitude, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
@@ -152,18 +147,20 @@ public class MatrixBarcode extends Barcode {
         // calculate integral image for edge density
         img_details.edgeDensity = calcEdgeDensityIntegralImage();
         
-        if(DEBUG_IMAGES)
+        // calculate histograms for each tile
+        calcHistograms();
+        
+        if(DEBUG_IMAGES){
             write_Mat("magnitudes.csv", img_details.gradient_magnitude);
-
+            write_Mat("angles.csv", img_details.gradient_direction);
+        }
     }
 
     private Mat calcProbabilityMatrix(int tileSize){
         // calculate probability of a barcode region in each tile based on HOG data for each tile
         
         // calculate probabilities for each pixel from window around it, normalize and threshold
-        Mat probabilities = calcProbabilityTilings(tileSize);
-        if (DEBUG_IMAGES)
-            write_Mat("probabilities_raw.csv", probabilities);
+        Mat probabilities = calcProbabilityTilings(tileSize);        
      
         double debug_prob_thresh = Imgproc.threshold(probabilities, probabilities, 128, 255, Imgproc.THRESH_BINARY);
         
@@ -182,6 +179,8 @@ public class MatrixBarcode extends Barcode {
         assert(searchParams.RECT_HEIGHT == searchParams.RECT_WIDTH): "RECT_HEIGHT and RECT_WIDTH must be equal in searchParams imageSpecificParams";
 
         int probMatTileSize = (int) (tileSize * (searchParams.PROB_MAT_TILE_SIZE/(1.0 * searchParams.tileSize)));
+        int threshold_min_gradient_edges = (int)(tileSize * tileSize * searchParams.THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER);
+        
         int right_col, bottom_row;
         int prob_mat_right_col, prob_mat_bottom_row;
         
@@ -201,26 +200,32 @@ public class MatrixBarcode extends Barcode {
             write_Mat("angles_modified.csv", img_details.gradient_direction);
 
         for(int i = 0, row_offset = 0; i < rows; i += tileSize, row_offset += probMatTileSize){
-            // first calculate the row locations of the rectangle and set them to -1 
-            // if they are outside the matrix bounds
-
-            bottom_row = ((i + tileSize) > rows) ? rows : (i + tileSize);
-            prob_mat_bottom_row = ((row_offset + probMatTileSize) > img_details.probMatRows) ? img_details.probMatRows : (row_offset + probMatTileSize);
+            // first do bounds checking for bottom right of tiles
+            
+            bottom_row = java.lang.Math.min((i + tileSize), rows);
+            prob_mat_bottom_row = java.lang.Math.min((row_offset + probMatTileSize), img_details.probMatRows);
 
             for(int j = 0, col_offset = 0; j < cols; j += tileSize, col_offset += probMatTileSize){
 
                 // then calculate the column locations of the rectangle and set them to -1 
                 // if they are outside the matrix bounds                
-                right_col = ((j + tileSize) > cols) ? cols : (j + tileSize);
-                prob_mat_right_col = ((col_offset + probMatTileSize) > img_details.probMatCols) ? img_details.probMatCols : (col_offset + probMatTileSize);
+                right_col = java.lang.Math.min((j + tileSize), cols);
+                prob_mat_right_col = java.lang.Math.min((col_offset + probMatTileSize), img_details.probMatCols);
 
+                // calculate number of edges in the tile using the already calculated integral image 
                 num_edges = (int) calc_rect_sum(img_details.edgeDensity, i, bottom_row, j, right_col);
                 
-                if (num_edges < searchParams.THRESHOLD_MIN_GRADIENT_EDGES) 
+                if (num_edges < threshold_min_gradient_edges) 
                 // if gradient density is below the threshold level, prob of matrix code in this tile is 0
                     continue;
-                imgWindow = img_details.gradient_direction.submat(i, bottom_row, j, right_col);
-                Imgproc.calcHist(Arrays.asList(imgWindow), mChannels, histMask, hist, mHistSize, mRanges, false);
+
+                for(int r = 0; r < img_details.bins; r++){
+                    hist.put(r, 0, (int) calc_rect_sum(img_details.histIntegrals.get(r), (i/searchParams.tileSize), 
+                        (bottom_row/searchParams.tileSize), (j/searchParams.tileSize), (right_col/searchParams.tileSize)));
+                }
+                
+                // imgWindow = img_details.gradient_direction.submat(i, bottom_row, j, right_col);
+                // Imgproc.calcHist(Arrays.asList(imgWindow), mChannels, histMask, hist, mHistSize, mRanges, false);
                 Core.sortIdx(hist, histIdx, Core.SORT_EVERY_COLUMN + Core.SORT_DESCENDING);
 
                 max_angle_idx = (int) histIdx.get(0, 0)[0];
@@ -232,8 +237,9 @@ public class MatrixBarcode extends Barcode {
                 angle_diff = Math.abs(max_angle_idx - second_highest_angle_index);
                 
                 // formula below is modified from Szentandrasi, Herout, Dubska paper pp. 4
-                prob = 2.0 * Math.min(max_angle_count, second_highest_angle_count) / (max_angle_count + second_highest_angle_count);
-                prob = (angle_diff == 1) ? 0 : prob; // ignores tiles where there is just noise between adjacent bins in the histogram
+                prob = 0;
+                if(angle_diff != 1) // ignores tiles where there is just noise between adjacent bins in the histogram
+                    prob = 2.0 * Math.min(max_angle_count, second_highest_angle_count) / (max_angle_count + second_highest_angle_count);
                 
                 prob_window = img_details.probabilities.submat(row_offset, prob_mat_bottom_row, col_offset, prob_mat_right_col);
                 prob_window.setTo(new Scalar((int) (prob*255)));
@@ -255,5 +261,36 @@ public class MatrixBarcode extends Barcode {
         Imgproc.integral(img_details.edgeDensity, img_details.edgeDensity);        
         
         return img_details.edgeDensity;
+    }
+    
+    private void calcHistograms() {
+        Mat imgWindow;
+        int tileSize = searchParams.tileSize;
+        
+        int right_col, bottom_row;
+        
+        for (int i = 0; i < rows; i += tileSize) {
+            // first do bounds checking for bottom right of tiles
+
+            bottom_row = java.lang.Math.min((i + tileSize), rows);
+
+            for (int j = 0; j < cols; j += tileSize) {
+
+                // then calculate the column locations of the rectangle and set them to -1 
+                // if they are outside the matrix bounds                
+                right_col = java.lang.Math.min((j + tileSize), cols);
+
+                imgWindow = img_details.gradient_direction.submat(i, bottom_row, j, right_col);
+                Imgproc.calcHist(Arrays.asList(imgWindow), mChannels, histMask, hist, mHistSize, mRanges, false);
+                hist.convertTo(hist, CvType.CV_32SC1);
+                hist.get(0, 0, img_details.histArray);
+                for(int r = 0; r < img_details.histArray.length; r++)
+                    img_details.histograms.get(r).put(i/tileSize, j/tileSize, img_details.histArray[r]);                
+            }
+        }
+        // now convert the histogram data into integral images
+        for(int r = 0; r < img_details.histograms.size(); r++){            
+            Imgproc.integral(img_details.histograms.get(r), img_details.histIntegrals.get(r));            
+        }
     }
  }

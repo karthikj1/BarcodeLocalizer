@@ -45,7 +45,6 @@ class SearchParameters {
     // size of rectangular window to calculate variance, probability etc around each pixel    
     protected int PROB_MAT_TILE_SIZE = 2;  // each window of RECT_HEIGHT X RECT_WIDTH size becomes a square of side PROB_MAT_TILE_SIZE
     protected int RECT_WIDTH, RECT_HEIGHT;
-    protected double THRESHOLD_MIN_GRADIENT_EDGES; // min number of gradient edges in rectangular window to consider as non-zero
     protected double THRESHOLD_MIN_AREA; // min area for candidate region to be considered as a barcode
 
     // used to expand candidate barcode region by looking for quiet zone around the barcode
@@ -170,7 +169,6 @@ class SearchParameters {
          */
         if(is_VSmallMatrix){
             THRESHOLD_MIN_AREA = 250; 
-            THRESHOLD_MIN_GRADIENT_EDGES = RECT_HEIGHT * RECT_WIDTH * THRESHOLD_MIN_GRADIENT_EDGES_MULTIPLIER;            
         }
         else{
             THRESHOLD_MIN_AREA = THRESHOLD_MIN_AREA_MULTIPLIER * cols * rows;

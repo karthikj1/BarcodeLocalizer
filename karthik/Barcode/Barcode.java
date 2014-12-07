@@ -221,6 +221,7 @@ public abstract class Barcode {
     protected double calc_rect_sum(Mat integral, int top_row, int bottom_row, int left_col, int right_col) {
         // calculates sum of values within a rectangle from a given integral image
         // if the right col or bottom row falls outside the image bounds, sets it to max col and max row
+        // in actuality, top_row - 1 and left_col - 1 are used - see p. 185 of Learning OpenCV ed. 1 by Gary Bradski for an explanation
         // if top_row or left_col are outside image boundaries, it uses 0 for their value
         // this is useful when one part of the rectangle lies outside the image bounds
         
@@ -231,19 +232,16 @@ public abstract class Barcode {
         int numCols = integral.cols();
         
         // do bounds checking on provided parameters
-        bottom_row = (bottom_row > numRows) ? numRows : bottom_row;
-        right_col = (right_col > numCols) ? numCols : right_col;
-        left_col = (left_col < 0) ? -1 : left_col;
-        top_row = (top_row < 0) ? -1 : top_row;
+        bottom_row = java.lang.Math.min(bottom_row, numRows);
+        right_col = java.lang.Math.min(right_col, numCols);
         
         bottom_right = integral.get(bottom_row, right_col)[0];
-        top_right = (top_row == -1) ? 0 : integral.get(top_row, right_col)[0];
-        top_left = (left_col == -1 || top_row == -1) ? 0 : integral.get(top_row, left_col)[0];
-        bottom_left = (left_col == -1) ? 0 : integral.get(bottom_row, left_col)[0];
+        top_right = (top_row < 0) ? 0 : integral.get(top_row, right_col)[0];
+        top_left = (left_col < 0 || top_row < 0) ? 0 : integral.get(top_row, left_col)[0];
+        bottom_left = (left_col < 0) ? 0 : integral.get(bottom_row, left_col)[0];
 
         sum = (bottom_right - bottom_left - top_right + top_left);
         return sum;
-
     }
 
     protected static void write_Mat(String filename, Mat img) {

@@ -50,8 +50,15 @@ class ImageInfo {
     Point[] scaledCorners = new Point[4];
 
     // used in histogram calculation
+    private static final int BIN_WIDTH = 15;  // bin width for histogram    
+    protected static final int bins = 180 / BIN_WIDTH;
+
     int probMatRows, probMatCols;
     Mat edgeDensity;
+    List<Mat> histograms = new ArrayList<Mat>();
+    List<Mat> histIntegrals = new ArrayList<Mat>();
+    
+    int[] histArray = new int[bins];
     
     ImageInfo(Mat src) {
        src_original = src;
@@ -75,6 +82,11 @@ class ImageInfo {
         probMatRows = probabilities.rows();
         probMatCols = probabilities.cols();
         edgeDensity = Mat.zeros((int) (rows/(1.0 * searchParams.tileSize)),(int) (cols/(1.0 * searchParams.tileSize)), CvType.CV_16U);
+        // create Mat objects to contain integral histograms
+        for(int r = 0; r < bins; r++){
+            histograms.add(Mat.zeros((int) (rows/(1.0 * searchParams.tileSize) + 1), (int) (cols/(1.0 * searchParams.tileSize) + 1), CvType.CV_32F));
+            histIntegrals.add(Mat.zeros((int)(rows/(1.0 * searchParams.tileSize) + 1), (int) (cols/(1.0 * searchParams.tileSize) + 1), CvType.CV_32FC1));
+        }
     }
     
 }
