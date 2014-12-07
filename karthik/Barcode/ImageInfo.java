@@ -49,6 +49,10 @@ class ImageInfo {
         
     Point[] scaledCorners = new Point[4];
 
+    // used in histogram calculation
+    int probMatRows, probMatCols;
+    Mat edgeDensity;
+    
     ImageInfo(Mat src) {
        src_original = src;
        gradient_direction = new Mat();
@@ -63,6 +67,14 @@ class ImageInfo {
            newCornerPoints.add(new Point());
            transformedPoints.add(new Point());
        }
-    }       
+    }
+    
+    protected void initializeMats(int rows, int cols, SearchParameters searchParams){
+        probabilities = Mat.zeros((int) (rows * searchParams.scale_factor + 1), (int) (cols * searchParams.scale_factor + 1), CvType.CV_8U);
+        src_grayscale = new Mat(rows, cols, CvType.CV_32F);
+        probMatRows = probabilities.rows();
+        probMatCols = probabilities.cols();
+        edgeDensity = Mat.zeros((int) (rows/(1.0 * searchParams.tileSize)),(int) (cols/(1.0 * searchParams.tileSize)), CvType.CV_16U);
+    }
     
 }

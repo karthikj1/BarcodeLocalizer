@@ -43,7 +43,7 @@ class SearchParameters {
     double RECT_WIDTH_MULTIPLIER;
 
     // size of rectangular window to calculate variance, probability etc around each pixel    
-    protected int TILE_SIZE = 2;  // each window of RECT_HEIGHT X RECT_WIDTH size becomes a square of side TILE_SIZE
+    protected int PROB_MAT_TILE_SIZE = 2;  // each window of RECT_HEIGHT X RECT_WIDTH size becomes a square of side PROB_MAT_TILE_SIZE
     protected int RECT_WIDTH, RECT_HEIGHT;
     protected double THRESHOLD_MIN_GRADIENT_EDGES; // min number of gradient edges in rectangular window to consider as non-zero
     protected double THRESHOLD_MIN_AREA; // min area for candidate region to be considered as a barcode
@@ -76,7 +76,7 @@ class SearchParameters {
         params.elem_size = new Size(10, 10);
         params.large_elem_size = new Size(12, 12);
         params.tileSize = params.RECT_HEIGHT;
-        params.scale_factor = params.TILE_SIZE/(params.RECT_HEIGHT * 1.0);
+        params.scale_factor = params.PROB_MAT_TILE_SIZE/(params.RECT_HEIGHT * 1.0);
         return params;
     }
 
@@ -97,7 +97,7 @@ class SearchParameters {
         params.elem_size = new Size(10, 10);
         params.large_elem_size = new Size(12, 12);
         params.tileSize = params.RECT_HEIGHT;
-        params.scale_factor = params.TILE_SIZE/(params.RECT_HEIGHT * 1.0);
+        params.scale_factor = params.PROB_MAT_TILE_SIZE/(params.RECT_HEIGHT * 1.0);
         return params;
     }
 
@@ -119,7 +119,7 @@ class SearchParameters {
         params.elem_size = new Size(5, 5);
         params.large_elem_size = new Size(6, 6);
         params.tileSize = params.RECT_HEIGHT;
-        params.scale_factor = params.TILE_SIZE/(params.RECT_HEIGHT * 1.0);
+        params.scale_factor = params.PROB_MAT_TILE_SIZE/(params.RECT_HEIGHT * 1.0);
         return params;
     }
  
@@ -141,7 +141,7 @@ class SearchParameters {
         params.elem_size = new Size(20, 20);
         params.large_elem_size = new Size(24, 24);
         params.tileSize = params.RECT_HEIGHT;
-        params.scale_factor = params.TILE_SIZE/(params.RECT_HEIGHT * 1.0);
+        params.scale_factor = params.PROB_MAT_TILE_SIZE/(params.RECT_HEIGHT * 1.0);
         return params;
     }
     
@@ -156,10 +156,10 @@ class SearchParameters {
         params.RECT_HEIGHT = params.RECT_WIDTH = 10;
             
         // set small element size to 50% bigger than tile height/width to erode small elements away
-        params.elem_size = new Size(params.TILE_SIZE * 1.5, params.TILE_SIZE * 1.5);  
-        params.large_elem_size = new Size(params.TILE_SIZE * 2, params.TILE_SIZE * 2);
+        params.elem_size = new Size(params.PROB_MAT_TILE_SIZE * 1.5, params.PROB_MAT_TILE_SIZE * 1.5);  
+        params.large_elem_size = new Size(params.PROB_MAT_TILE_SIZE * 2, params.PROB_MAT_TILE_SIZE * 2);
         params.tileSize = params.RECT_HEIGHT;
-        params.scale_factor = params.TILE_SIZE/(params.RECT_HEIGHT * 1.0);
+        params.scale_factor = params.PROB_MAT_TILE_SIZE/(params.RECT_HEIGHT * 1.0);
 
         return params;
     }
