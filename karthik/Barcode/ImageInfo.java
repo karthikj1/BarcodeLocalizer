@@ -58,7 +58,7 @@ class ImageInfo {
     List<Mat> histograms = new ArrayList<Mat>();
     List<Mat> histIntegrals = new ArrayList<Mat>();
     
-    int[] histArray = new int[bins];
+    Integer[] histArray = new Integer[bins];
     
     ImageInfo(Mat src) {
        src_original = src;

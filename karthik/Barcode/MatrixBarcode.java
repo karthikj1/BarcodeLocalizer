@@ -17,10 +17,7 @@
 package karthik.Barcode;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.utils.Converters;
@@ -41,7 +38,6 @@ public class MatrixBarcode extends Barcode {
     private static Mat angles;
     
     private static final Mat hierarchy = new Mat(); // empty Mat required as parameter in contour finding. Not used anywhere else.
-    private static List<Integer> histList = new ArrayList<Integer>();
     private static final Map<Integer, Scalar> scalarDict = new HashMap<Integer, Scalar>();
     
     static{
@@ -203,7 +199,6 @@ public class MatrixBarcode extends Barcode {
         int right_col, bottom_row;
         int prob_mat_right_col, prob_mat_bottom_row;
         
-        Mat imgWindow; // used to hold sub-matrices from the image that represent the window around the current point
         Mat prob_window; // used to hold sub-matrices into probability matrix that represent window around current point
 
         int num_edges;
@@ -231,13 +226,13 @@ public class MatrixBarcode extends Barcode {
                 if (num_edges < threshold_min_gradient_edges) 
                 // if gradient density is below the threshold level, prob of matrix code in this tile is 0
                     continue;
-                histList.clear();
+                
                 for(int r = 0; r < img_details.bins; r++){
-                    histList.add((int) calc_rect_sum(img_details.histIntegrals.get(r), i, bottom_row, j, right_col));
+                    img_details.histArray[r] = (int) calc_rect_sum(img_details.histIntegrals.get(r), i, bottom_row, j, right_col);
                 }
                 
-                hist = Converters.vector_int_to_Mat(histList);
-                // imgWindow = img_details.gradient_direction.submat(i, bottom_row, j, right_col);
+                hist = Converters.vector_int_to_Mat(Arrays.asList(img_details.histArray));
+                // Mat imgWindow = img_details.gradient_direction.submat(i, bottom_row, j, right_col);
                 // Imgproc.calcHist(Arrays.asList(imgWindow), mChannels, histMask, hist, mHistSize, mRanges, false);
                 Core.sortIdx(hist, histIdx, Core.SORT_EVERY_COLUMN + Core.SORT_DESCENDING);
 
