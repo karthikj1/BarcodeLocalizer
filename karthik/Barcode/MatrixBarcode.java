@@ -18,10 +18,12 @@ package karthik.Barcode;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.utils.Converters;
 
 /**
  *
@@ -30,23 +32,31 @@ import org.opencv.imgproc.Imgproc;
 public class MatrixBarcode extends Barcode {
 
     // used in histogram calculation
-    private static final int DUMMY_ANGLE = 255;
-    
-    private static final Scalar DUMMY_ANGLE_SCALAR = new Scalar(DUMMY_ANGLE);
+    private static final int DUMMY_ANGLE = 255;    
     private static final Scalar ZERO_SCALAR = new Scalar(0);
-    private static final Scalar SCALAR_170 = new Scalar(170);
-    private static final Scalar SCALAR_180 = new Scalar(180);
-    private static final Scalar SCALAR_NEGATIVE_180 = new Scalar(-180);
-    private static final Scalar SCALAR_360 = new Scalar(360);
 
-    private static final MatOfInt mHistSize = new MatOfInt(ImageInfo.bins);
-    private static final MatOfFloat mRanges = new MatOfFloat(0, 179);
-    private static final MatOfInt mChannels = new MatOfInt(0);
-    private static MatOfInt hist = new MatOfInt(ImageInfo.bins, 1);
+    private static Mat hist = new MatOfInt(ImageInfo.bins, 1);
     private static Mat histIdx = new Mat();
-    private static final Mat histMask = new Mat(); // empty Mat to use as mask for histogram calculation
+    private static Mat mask = new Mat(); // empty Mat to use as mask for histogram calculation
+    private static Mat angles;
     
     private static final Mat hierarchy = new Mat(); // empty Mat required as parameter in contour finding. Not used anywhere else.
+    private static List<Integer> histList = new ArrayList<Integer>();
+    private static final Map<Integer, Scalar> scalarDict = new HashMap<Integer, Scalar>();
+    
+    static{
+        // create a hashmap with Scalar objects used during histogram calculation
+        // done so that we can reuse these objects instead of creating and destroying them
+        for(int r = 1; r <= 181; r += ImageInfo.BIN_WIDTH)
+            scalarDict.put(r, new Scalar(r));
+        
+        // add objects used when trimming angles to 0-360 range
+        scalarDict.put(170, new Scalar(170));
+        scalarDict.put(180, new Scalar(180));
+        scalarDict.put(-180, new Scalar(-180));
+        scalarDict.put(360, new Scalar(360));
+        scalarDict.put(DUMMY_ANGLE, new Scalar(DUMMY_ANGLE));
+    }
     
     public MatrixBarcode(String filename, boolean debug, TryHarderFlags flag) throws IOException{
         super(filename, flag);
@@ -64,7 +74,7 @@ public class MatrixBarcode extends Barcode {
     public List<CandidateResult> locateBarcode() throws IOException{
         
         calcGradientDirectionAndMagnitude();
-        for(int tileSize = searchParams.tileSize; tileSize < rows && tileSize < cols; tileSize *= 2){            
+        for(int tileSize = searchParams.tileSize; tileSize < rows && tileSize < cols; tileSize *= 4){            
             img_details.probabilities = calcProbabilityMatrix(tileSize);   // find areas with low variance in gradient direction
 
         //    connectComponents();
@@ -131,19 +141,28 @@ public class MatrixBarcode extends Barcode {
         Core.phase(img_details.scharr_x, img_details.scharr_y, img_details.gradient_direction, true);
 
         // convert angles from 180-360 to 0-180 range and set angles from 170-180 to 0
-        Core.inRange(img_details.gradient_direction, SCALAR_180, SCALAR_360, img_details.mask);
-        Core.add(img_details.gradient_direction, SCALAR_NEGATIVE_180, img_details.gradient_direction, img_details.mask);
-        Core.inRange(img_details.gradient_direction, SCALAR_170, SCALAR_180, img_details.mask);
+        Core.inRange(img_details.gradient_direction, scalarDict.get(180), scalarDict.get(360), img_details.mask);
+        Core.add(img_details.gradient_direction, scalarDict.get(-180), img_details.gradient_direction, img_details.mask);
+        Core.inRange(img_details.gradient_direction, scalarDict.get(170), scalarDict.get(180), img_details.mask);
         img_details.gradient_direction.setTo(ZERO_SCALAR, img_details.mask);
         
         // convert type after modifying angle so that angles above 360 don't get truncated
         img_details.gradient_direction.convertTo(img_details.gradient_direction, CvType.CV_8U);
+        if(DEBUG_IMAGES)
+            write_Mat("angles.csv", img_details.gradient_direction);
 
         // calculate magnitude of gradient, normalize and threshold
         Core.magnitude(img_details.scharr_x, img_details.scharr_y, img_details.gradient_magnitude);
         Core.normalize(img_details.gradient_magnitude, img_details.gradient_magnitude, 0, 255, Core.NORM_MINMAX, CvType.CV_8U);
         Imgproc.threshold(img_details.gradient_magnitude, img_details.gradient_magnitude, 50, 255, Imgproc.THRESH_BINARY | Imgproc.THRESH_OTSU);
         
+        // set angle to DUMMY_ANGLE = 255 at all points where gradient magnitude is 0 i.e. where there are no edges
+        // these angles will be ignored in the histogram calculation since that counts only up to 180
+        Core.inRange(img_details.gradient_magnitude, ZERO_SCALAR, ZERO_SCALAR, img_details.mask);
+        img_details.gradient_direction.setTo(scalarDict.get(DUMMY_ANGLE), img_details.mask);
+        // add 1 to gradient directions so that gradients of 0 can be located
+        Core.add(img_details.gradient_direction, new Scalar(1), img_details.gradient_direction);
+
         // calculate integral image for edge density
         img_details.edgeDensity = calcEdgeDensityIntegralImage();
         
@@ -152,7 +171,7 @@ public class MatrixBarcode extends Barcode {
         
         if(DEBUG_IMAGES){
             write_Mat("magnitudes.csv", img_details.gradient_magnitude);
-            write_Mat("angles.csv", img_details.gradient_direction);
+            write_Mat("angles_modified.csv", img_details.gradient_direction);
         }
     }
 
@@ -192,12 +211,6 @@ public class MatrixBarcode extends Barcode {
         int max_angle_idx, second_highest_angle_index, max_angle_count, second_highest_angle_count, angle_diff;
         
         img_details.probabilities.setTo(ZERO_SCALAR);
-        // set angle to DUMMY_ANGLE = 255 at all points where gradient magnitude is 0 i.e. where there are no edges
-        // these angles will be ignored in the histogram calculation since that counts only up to 180
-        Core.inRange(img_details.gradient_magnitude, ZERO_SCALAR, ZERO_SCALAR, img_details.mask);
-        img_details.gradient_direction.setTo(DUMMY_ANGLE_SCALAR, img_details.mask);
-        if(DEBUG_IMAGES)
-            write_Mat("angles_modified.csv", img_details.gradient_direction);
 
         for(int i = 0, row_offset = 0; i < rows; i += tileSize, row_offset += probMatTileSize){
             // first do bounds checking for bottom right of tiles
@@ -218,12 +231,12 @@ public class MatrixBarcode extends Barcode {
                 if (num_edges < threshold_min_gradient_edges) 
                 // if gradient density is below the threshold level, prob of matrix code in this tile is 0
                     continue;
-
+                histList.clear();
                 for(int r = 0; r < img_details.bins; r++){
-                    hist.put(r, 0, (int) calc_rect_sum(img_details.histIntegrals.get(r), (i/searchParams.tileSize), 
-                        (bottom_row/searchParams.tileSize), (j/searchParams.tileSize), (right_col/searchParams.tileSize)));
+                    histList.add((int) calc_rect_sum(img_details.histIntegrals.get(r), i, bottom_row, j, right_col));
                 }
                 
+                hist = Converters.vector_int_to_Mat(histList);
                 // imgWindow = img_details.gradient_direction.submat(i, bottom_row, j, right_col);
                 // Imgproc.calcHist(Arrays.asList(imgWindow), mChannels, histMask, hist, mHistSize, mRanges, false);
                 Core.sortIdx(hist, histIdx, Core.SORT_EVERY_COLUMN + Core.SORT_DESCENDING);
@@ -262,35 +275,22 @@ public class MatrixBarcode extends Barcode {
         
         return img_details.edgeDensity;
     }
-    
-    private void calcHistograms() {
-        Mat imgWindow;
-        int tileSize = searchParams.tileSize;
         
-        int right_col, bottom_row;
-        
-        for (int i = 0; i < rows; i += tileSize) {
-            // first do bounds checking for bottom right of tiles
+    private void calcHistograms(){        
+        Mat target;
+        angles = img_details.gradient_direction.clone();
 
-            bottom_row = java.lang.Math.min((i + tileSize), rows);
-
-            for (int j = 0; j < cols; j += tileSize) {
-
-                // then calculate the column locations of the rectangle and set them to -1 
-                // if they are outside the matrix bounds                
-                right_col = java.lang.Math.min((j + tileSize), cols);
-
-                imgWindow = img_details.gradient_direction.submat(i, bottom_row, j, right_col);
-                Imgproc.calcHist(Arrays.asList(imgWindow), mChannels, histMask, hist, mHistSize, mRanges, false);
-                hist.convertTo(hist, CvType.CV_32SC1);
-                hist.get(0, 0, img_details.histArray);
-                for(int r = 0; r < img_details.histArray.length; r++)
-                    img_details.histograms.get(r).put(i/tileSize, j/tileSize, img_details.histArray[r]);                
-            }
-        }
-        // now convert the histogram data into integral images
-        for(int r = 0; r < img_details.histograms.size(); r++){            
-            Imgproc.integral(img_details.histograms.get(r), img_details.histIntegrals.get(r));            
+        for(int binRange = 1, integralIndex = 0; binRange < 181; binRange += img_details.BIN_WIDTH, integralIndex++){            
+            target  = img_details.histIntegrals.get(integralIndex);
+            
+            img_details.gradient_direction.copyTo(angles);
+            Core.inRange(img_details.gradient_direction, scalarDict.get(binRange), scalarDict.get(binRange + img_details.BIN_WIDTH), mask);
+            Core.bitwise_not(mask, mask);   
+            angles.setTo(ZERO_SCALAR, mask);
+            
+            Imgproc.threshold(angles, target, 0, 1, Imgproc.THRESH_BINARY);
+            Imgproc.integral(target, target);            
         }
     }
+        
  }

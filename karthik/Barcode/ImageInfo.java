@@ -50,7 +50,7 @@ class ImageInfo {
     Point[] scaledCorners = new Point[4];
 
     // used in histogram calculation
-    private static final int BIN_WIDTH = 15;  // bin width for histogram    
+    protected static final int BIN_WIDTH = 15;  // bin width for histogram    
     protected static final int bins = 180 / BIN_WIDTH;
 
     int probMatRows, probMatCols;
