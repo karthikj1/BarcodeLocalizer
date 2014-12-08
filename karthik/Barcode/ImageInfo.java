@@ -49,6 +49,17 @@ class ImageInfo {
         
     Point[] scaledCorners = new Point[4];
 
+    // used in histogram calculation
+    protected static final int BIN_WIDTH = 15;  // bin width for histogram    
+    protected static final int bins = 180 / BIN_WIDTH;
+
+    int probMatRows, probMatCols;
+    Mat edgeDensity;
+    List<Mat> histograms = new ArrayList<Mat>();
+    List<Mat> histIntegrals = new ArrayList<Mat>();
+    
+    Integer[] histArray = new Integer[bins];
+    
     ImageInfo(Mat src) {
        src_original = src;
        gradient_direction = new Mat();
@@ -63,6 +74,19 @@ class ImageInfo {
            newCornerPoints.add(new Point());
            transformedPoints.add(new Point());
        }
-    }       
+    }
+    
+    protected void initializeMats(int rows, int cols, SearchParameters searchParams){
+        probabilities = Mat.zeros((int) (rows * searchParams.scale_factor + 1), (int) (cols * searchParams.scale_factor + 1), CvType.CV_8U);
+        src_grayscale = new Mat(rows, cols, CvType.CV_32F);
+        probMatRows = probabilities.rows();
+        probMatCols = probabilities.cols();
+        edgeDensity = Mat.zeros((int) (rows/(1.0 * searchParams.tileSize)),(int) (cols/(1.0 * searchParams.tileSize)), CvType.CV_16U);
+        // create Mat objects to contain integral histograms
+        for(int r = 0; r < bins; r++){
+            histograms.add(Mat.zeros((int) (rows/(1.0 * searchParams.tileSize) + 1), (int) (cols/(1.0 * searchParams.tileSize) + 1), CvType.CV_32F));
+            histIntegrals.add(Mat.zeros((int)(rows/(1.0 * searchParams.tileSize) + 1), (int) (cols/(1.0 * searchParams.tileSize) + 1), CvType.CV_32FC1));
+        }
+    }
     
 }
