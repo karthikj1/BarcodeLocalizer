@@ -23,7 +23,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import org.opencv.core.*;
-import org.opencv.highgui.Highgui;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 /**
@@ -261,12 +261,12 @@ public abstract class Barcode {
 
     protected Mat loadImage() throws IOException {
     // reads the image file in the class variable name
-        // Highgui produces an incomprehensible error message if the filename is incorrect so
+        // Imgcodecs produces an incomprehensible error message if the filename is incorrect so
         // we do the check ourselves first
         File f = new File(name);
         if (!f.isFile())
             throw new IOException("BarcodeLocalizer was called with an invalid filename " + name);
-        return Highgui.imread(name, Highgui.CV_LOAD_IMAGE_COLOR);
+        return Imgcodecs.imread(name, Imgcodecs.CV_LOAD_IMAGE_COLOR);
     }
 
 }

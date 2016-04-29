@@ -28,7 +28,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import org.opencv.core.*;
-import org.opencv.highgui.Highgui;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 /**
@@ -74,7 +74,7 @@ public class ImageDisplay extends JPanel {
     protected static BufferedImage getBufImg(Mat image) throws IOException {
         // converts image in an openCV Mat object into a Java BufferedImage 
         MatOfByte bytemat = new MatOfByte();
-        Highgui.imencode(".jpg", image, bytemat);
+        Imgcodecs.imencode(".jpg", image, bytemat);
         InputStream in = new ByteArrayInputStream(bytemat.toArray());
         BufferedImage img = ImageIO.read(in);
         return img;
@@ -132,10 +132,10 @@ public static void showImageFrameGrid(Mat openCV_img, String title) {
     int cols = displayImg.cols();
     // draw rows
     for(int i = 0; i < rows; i += 10) 
-        Core.line(displayImg, new Point(0, i), new Point(cols - 1, i), new Scalar(0, 128, 255));
+        Imgproc.line(displayImg, new Point(0, i), new Point(cols - 1, i), new Scalar(0, 128, 255));
     
     for(int i = 0; i < cols; i += 10) 
-        Core.line(displayImg, new Point(i, 0), new Point(i, rows - 1), new Scalar(0, 128, 255));
+        Imgproc.line(displayImg, new Point(i, 0), new Point(i, rows - 1), new Scalar(0, 128, 255));
     
     if(displayImg.rows() > 750)
         Imgproc.resize(displayImg, displayImg, new Size(1000, 750));

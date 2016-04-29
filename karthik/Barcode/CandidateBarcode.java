@@ -2,6 +2,7 @@ package karthik.Barcode;
 
 import java.util.Comparator;
 import org.opencv.core.*;
+import org.opencv.imgproc.*;
 
 /*
  * Copyright (C) 2014 karthik
@@ -48,8 +49,8 @@ class CandidateBarcode {
         candidateRegion.points(rectPoints);
         // draw the rectangle
         for (int j = 0; j < 3; j++)
-            Core.line(img, rectPoints[j], rectPoints[j + 1], colour, 2, Core.LINE_AA, 0);
-        Core.line(img, rectPoints[3], rectPoints[0], colour, 2, Core.LINE_AA, 0);
+            Imgproc.line(img, rectPoints[j], rectPoints[j + 1], colour, 2, Imgproc.LINE_AA, 0);
+        Imgproc.line(img, rectPoints[3], rectPoints[0], colour, 2, Imgproc.LINE_AA, 0);
     }
 
     protected double estimate_barcode_orientation() {
