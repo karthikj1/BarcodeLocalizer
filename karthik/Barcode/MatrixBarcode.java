@@ -264,9 +264,10 @@ public class MatrixBarcode extends Barcode {
         // first set all non-zero gradient magnitude points (i.e. all edges) to 1
         // then calculate the integral image from the above
         // we can now calculate the number of edges in any tile in the matrix using the integral image
+        Mat temp = new Mat();
         
-        Imgproc.threshold(img_details.gradient_magnitude, img_details.edgeDensity, 1, 1, Imgproc.THRESH_BINARY);        
-        Imgproc.integral(img_details.edgeDensity, img_details.edgeDensity);        
+        Imgproc.threshold(img_details.gradient_magnitude, temp, 1, 1, Imgproc.THRESH_BINARY);
+        Imgproc.integral(temp, img_details.edgeDensity);
         
         return img_details.edgeDensity;
     }
@@ -282,9 +283,10 @@ public class MatrixBarcode extends Barcode {
             Core.inRange(img_details.gradient_direction, scalarDict.get(binRange), scalarDict.get(binRange + img_details.BIN_WIDTH), mask);
             Core.bitwise_not(mask, mask);   
             angles.setTo(ZERO_SCALAR, mask);
+            Mat temp = new Mat();
             
-            Imgproc.threshold(angles, target, 0, 1, Imgproc.THRESH_BINARY);
-            Imgproc.integral(target, target);            
+            Imgproc.threshold(angles, temp, 0, 1, Imgproc.THRESH_BINARY);
+            Imgproc.integral(temp, target);            
         }
     }
         
